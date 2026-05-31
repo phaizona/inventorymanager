@@ -20,7 +20,7 @@
       <p class="header-subtitle">Scroll to zoom · Drag background to pan · Click item for actions · Same-name items merge on drop</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-folder" id="newFolderBtn">📁 New Folder</button>
+      
       <button class="btn" id="exportBtn">⬇ Export</button>
       <button class="btn" id="importBtn">⬆ Import</button>
       <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
@@ -38,6 +38,7 @@
         </div>
         <img id="previewImg" src="" alt="" style="display:none" />
       </div>
+      <p class="upload-hint">- Upload an image to create a new item. <br/>-Name your item and set its quantity.</p>
       <input type="file" id="fileInput" accept="image/*" />
 
       <div>
@@ -59,7 +60,7 @@
 
       <button class="btn-add" id="addBtn" disabled>Add to Inventory</button>
       <button class="btn-make-folder" id="sidebarFolderBtn">Create New Folder</button>
-
+      <p class="upload-hint">Folders can help you organize your inventory. <br/>Simply drag items into a folder or out of one.</p>
       <div class="sidebar-footer" id="itemCount">No items in inventory</div>
     </aside>
 
