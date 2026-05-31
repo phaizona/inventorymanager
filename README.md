@@ -64,16 +64,6 @@ https://phaizona.github.io/inventorymanager/
 * Fantasy writing tools
 * Personal inventory organization
 
-## Future Ideas
-
-* Item rarity system
-* Categories and filters
-* Character-specific inventories
-* Equipment slots
-* Trading system
-* Multiplayer synchronization
-* Cloud saving
-
 ---
 
 Created by **Phaizona**
