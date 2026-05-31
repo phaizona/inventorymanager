@@ -116,6 +116,10 @@ header::after  { right: 10px; }
 .upload-zone:hover { border-color: var(--gold); background: rgba(200,146,42,0.06); }
 .upload-zone.drag-over { border-color: var(--gold-shine); box-shadow: inset 0 0 20px rgba(200,146,42,0.2); }
 .upload-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+#fileInput,
+#importInput {
+  display: none;
+}
 .upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
 .upload-icon { font-size: 30px; opacity: 0.45; }
 .upload-hint { font-size: 11px; color: var(--parchment-dark); text-align: center; line-height: 1.4; font-style: italic; }
