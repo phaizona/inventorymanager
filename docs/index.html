@@ -8,8 +8,484 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Uncial+Antiqua&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=2">
 
+  <style>
+/* ============================================================
+   FANTASY INVENTORY MANAGER — style.css
+   ============================================================ */
+
+:root {
+  --parchment:      #e8d5a3;
+  --parchment-dark: #c9a96e;
+  --ink:            #2a1a05;
+  --ink-faded:      #5c3d1a;
+  --gold:           #c8922a;
+  --gold-light:     #e8b84b;
+  --gold-shine:     #f5d87a;
+  --deep-brown:     #1a0d00;
+  --leather:        #6b3a1f;
+  --leather-light:  #8b5e3c;
+  --folder-bg:      rgba(80,45,10,0.35);
+  --folder-border:  #8b6020;
+  --merge-glow:     rgba(100,220,100,0.6);
+  --font-title:     'Uncial Antiqua', serif;
+  --font-heading:   'MedievalSharp', serif;
+  --font-body:      'Crimson Pro', serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--deep-brown);
+  color: var(--parchment);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 8px 56px;
+  background: linear-gradient(180deg, #0d0500 0%, #2a1200 60%, #1a0d00 100%);
+  border-bottom: 3px solid var(--gold);
+  box-shadow: 0 4px 20px rgba(200,146,42,0.3);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+header::before, header::after {
+  content: '᛭'; font-size: 20px; color: var(--gold);
+  opacity: 0.4; position: absolute; top: 50%; transform: translateY(-50%);
+}
+header::before { left: 56px; }
+header::after  { right: 10px; }
+
+.header-center { flex: 1; text-align: center; }
+.header-title {
+  font-family: var(--font-title);
+  font-size: clamp(16px, 2.2vw, 26px);
+  color: var(--gold-light);
+  text-shadow: 0 0 18px var(--gold), 0 2px 4px var(--deep-brown);
+  letter-spacing: 2px;
+}
+.header-subtitle {
+  font-family: var(--font-body); font-style: italic;
+  font-size: 11px; color: var(--parchment-dark); opacity: 0.65;
+}
+.header-actions { display: flex; gap: 5px; align-items: center; }
+
+/* ── Buttons ── */
+.btn {
+  font-family: var(--font-heading); font-size: 11px; padding: 5px 12px;
+  border: 1.5px solid var(--gold); background: linear-gradient(135deg,#2a1500,#3d2000);
+  color: var(--gold-light); cursor: pointer; border-radius: 3px;
+  letter-spacing: 0.5px; transition: all 0.18s;
+}
+.btn:hover { background: linear-gradient(135deg,#3d2200,#5c3500); color: var(--gold-shine); box-shadow: 0 0 10px rgba(200,146,42,0.35); }
+.btn:active { transform: scale(0.96); }
+.btn-danger { border-color: #a04030; color: #e06050; }
+.btn-danger:hover { background: linear-gradient(135deg,#3d1010,#5c1a1a); color: #ff8070; }
+.btn-folder { border-color: var(--folder-border); color: var(--parchment-dark); }
+.btn-folder:hover { border-color: var(--gold); background: linear-gradient(135deg,#2a1800,#4a2800); color: var(--gold-light); }
+
+/* ── Layout ── */
+.main { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 230px; flex-shrink: 0;
+  background: linear-gradient(180deg,#1a0d00 0%,#0d0500 100%);
+  border-right: 3px solid var(--gold);
+  display: flex; flex-direction: column;
+  padding: 14px 11px;
+  gap: 12px; overflow-y: auto;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  position: relative; z-index: 5;
+}
+.sidebar-title {
+  font-family: var(--font-heading); font-size: 12px; color: var(--gold);
+  text-align: center; letter-spacing: 2px; text-transform: uppercase;
+  padding-bottom: 10px; border-bottom: 1px solid var(--leather);
+}
+.sidebar-title::before, .sidebar-title::after { content: '✦'; color: var(--gold-light); font-size: 9px; margin: 0 5px; }
+.brand-divider {
+  text-align: center; font-family: var(--font-title); font-size: 13px;
+  color: var(--gold); opacity: 0.55; letter-spacing: 3px; padding: 2px 0;
+}
+
+.upload-zone {
+  width: 100%; aspect-ratio: 1; border: 2px dashed var(--leather-light);
+  border-radius: 6px; background: rgba(255,255,255,0.02);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.22s; position: relative; overflow: hidden;
+}
+.upload-zone:hover { border-color: var(--gold); background: rgba(200,146,42,0.06); }
+.upload-zone.drag-over { border-color: var(--gold-shine); box-shadow: inset 0 0 20px rgba(200,146,42,0.2); }
+.upload-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+#fileInput,
+#importInput {
+  display: none;
+}
+.upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
+.upload-icon { font-size: 30px; opacity: 0.45; }
+.upload-hint { font-size: 11px; color: var(--parchment-dark); text-align: center; line-height: 1.4; font-style: italic; }
+
+.field-label { font-family: var(--font-heading); font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+
+.fancy-input {
+  width: 100%; background: rgba(0,0,0,0.4); border: 1.5px solid var(--leather);
+  border-radius: 4px; color: var(--parchment); font-family: var(--font-body);
+  font-size: 14px; padding: 7px 9px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.fancy-input:focus { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,146,42,0.22); }
+.fancy-input::placeholder { color: var(--ink-faded); font-style: italic; }
+.fancy-input.error { border-color: #c04030; box-shadow: 0 0 8px rgba(192,64,48,0.4); }
+
+.input-warn { font-family: var(--font-body); font-style: italic; font-size: 11px; color: #e07060; margin-top: 4px; display: none; }
+.input-warn.visible { display: block; }
+
+.qty-row { display: flex; align-items: center; gap: 7px; }
+.qty-btn {
+  width: 26px; height: 26px; background: rgba(200,146,42,0.14);
+  border: 1.5px solid var(--gold); color: var(--gold-light); font-size: 17px;
+  cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  transition: background 0.14s; line-height: 1;
+}
+.qty-btn:hover { background: rgba(200,146,42,0.3); }
+.qty-display {
+  flex: 1; text-align: center; font-family: var(--font-heading); font-size: 15px;
+  color: var(--parchment); background: rgba(0,0,0,0.3); border: 1.5px solid var(--leather);
+  border-radius: 3px; padding: 3px 0;
+}
+
+.btn-add {
+  width: 100%; padding: 9px; font-family: var(--font-heading); font-size: 12px;
+  letter-spacing: 1.5px; background: linear-gradient(135deg,#3d2200,#6b3a00);
+  border: 2px solid var(--gold); color: var(--gold-shine); cursor: pointer;
+  border-radius: 4px; transition: all 0.2s;
+}
+.btn-add::before { content: '⚔'; margin-right: 7px; }
+.btn-add:hover { background: linear-gradient(135deg,#5c3500,#8b5200); box-shadow: 0 0 16px rgba(200,146,42,0.4); transform: translateY(-1px); }
+.btn-add:active { transform: translateY(0); }
+.btn-add:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-make-folder {
+  width: 100%; padding: 8px; font-family: var(--font-heading); font-size: 11px;
+  letter-spacing: 1px; background: linear-gradient(135deg,#1a1000,#2e1e00);
+  border: 1.5px solid var(--folder-border); color: var(--parchment-dark);
+  cursor: pointer; border-radius: 4px; transition: all 0.2s;
+}
+.btn-make-folder::before { content: '📁'; margin-right: 6px; }
+.btn-make-folder:hover { background: linear-gradient(135deg,#2a1a00,#4a2e00); border-color: var(--gold); color: var(--gold-light); }
+
+.sidebar-footer {
+  margin-top: auto; text-align: center; font-size: 10px; color: var(--ink-faded);
+  font-style: italic; padding-top: 8px; border-top: 1px solid var(--leather);
+}
+
+/* ── Canvas Viewport ── */
+.canvas-viewport {
+  flex: 1; position: relative; overflow: hidden; cursor: default;
+  background:
+    radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%),
+    repeating-linear-gradient(92deg, transparent 0, transparent 80px, rgba(0,0,0,0.035) 80px, rgba(0,0,0,0.035) 81px),
+    repeating-linear-gradient(2deg,  transparent 0, transparent 60px, rgba(0,0,0,0.025) 60px, rgba(0,0,0,0.025) 61px),
+    linear-gradient(160deg,#3d2510 0%,#2a1500 50%,#1a0d00 100%);
+}
+
+#canvasWorld {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+#canvasWorld::before {
+  content: ''; position: absolute; top: 1500px; left: 1500px;
+  transform: translate(-50%,-50%); width: 600px; height: 600px;
+  border-radius: 50%; border: 1px solid rgba(200,146,42,0.05);
+  box-shadow:
+    0 0 0 50px  rgba(200,146,42,0.025),
+    0 0 0 120px rgba(200,146,42,0.018),
+    0 0 0 200px rgba(200,146,42,0.012),
+    0 0 0 350px rgba(200,146,42,0.006);
+  pointer-events: none;
+}
+
+.empty-msg {
+  position: absolute; top: 1500px; left: 1500px;
+  transform: translate(-50%,-50%); text-align: center;
+  color: var(--leather-light); font-style: italic;
+  opacity: 0.38; pointer-events: none; line-height: 2; font-size: 15px;
+}
+.empty-msg .empty-icon { font-size: 46px; display: block; margin-bottom: 8px; }
+
+/* ── Zoom Controls ── */
+.zoom-controls {
+  position: absolute; top: 12px; right: 12px;
+  display: flex; flex-direction: column; gap: 4px; z-index: 15;
+}
+.zoom-btn {
+  width: 30px; height: 30px; background: rgba(26,13,0,0.82);
+  border: 1.5px solid var(--leather); color: var(--gold-light); font-size: 18px;
+  cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-family: monospace;
+}
+.zoom-btn:hover { border-color: var(--gold); background: rgba(200,146,42,0.18); }
+.zoom-label { text-align: center; font-family: var(--font-heading); font-size: 10px; color: var(--parchment-dark); opacity: 0.6; }
+
+/* ── Folder ── */
+.inv-folder {
+  position: absolute;
+  min-width: 200px; min-height: 160px;
+  border: 2px solid var(--folder-border);
+  border-radius: 8px;
+  user-select: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  overflow: visible;
+  background: var(--folder-bg);
+}
+/* Clip only the visual background, not the children */
+.folder-body-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: var(--folder-bg);
+  pointer-events: none;
+  z-index: 0;
+}
+.inv-folder.drag-over-folder {
+  border-color: var(--gold-shine);
+  box-shadow: 0 0 0 2px var(--gold-shine), inset 0 0 30px rgba(200,146,42,0.12);
+}
+.inv-folder.folder-dragging {
+  z-index: 90;
+  filter: drop-shadow(0 10px 28px rgba(200,146,42,0.45));
+  cursor: grabbing;
+}
+.folder-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  background: linear-gradient(90deg,rgba(139,96,32,0.4),rgba(107,58,31,0.3));
+  border-bottom: 1px solid var(--folder-border);
+  border-radius: 6px 6px 0 0;
+  cursor: grab;
+  min-height: 34px;
+}
+.folder-header:active { cursor: grabbing; }
+.folder-icon { font-size: 16px; flex-shrink: 0; }
+.folder-name-el {
+  font-family: var(--font-heading); font-size: 12px;
+  color: var(--gold-light); letter-spacing: 0.5px;
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.folder-rename-input {
+  font-family: var(--font-heading); font-size: 12px;
+  background: rgba(0,0,0,0.6); border: 1px solid var(--gold);
+  border-radius: 3px; color: var(--gold-light); padding: 2px 6px;
+  outline: none; width: 110px;
+}
+.folder-actions { display: flex; gap: 3px; }
+.folder-action-btn {
+  width: 20px; height: 20px; font-size: 11px;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--leather);
+  color: var(--parchment-dark); cursor: pointer; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.13s;
+}
+.folder-action-btn:hover { border-color: var(--gold); color: var(--gold-light); background: rgba(200,146,42,0.2); }
+.folder-action-btn.danger:hover { border-color: #c04030; color: #ff8070; background: rgba(160,64,48,0.25); }
+
+.folder-body {
+  position: relative;
+  min-height: 120px;
+  padding: 10px;
+  overflow: visible;
+  /* Items inside can overflow and remain interactive */
+  pointer-events: none;
+}
+/* Re-enable pointer events only for actual items inside */
+.folder-body .inv-item {
+  pointer-events: all;
+}
+.folder-count {
+  position: absolute; bottom: 4px; right: 8px;
+  font-family: var(--font-body); font-style: italic; font-size: 10px;
+  color: var(--parchment-dark); opacity: 0.5; pointer-events: none;
+}
+.folder-resize {
+  position: absolute; bottom: 0; right: 0;
+  width: 16px; height: 16px; cursor: nwse-resize; opacity: 0.4;
+}
+.folder-resize::after {
+  content: ''; position: absolute; bottom: 3px; right: 3px;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--gold); border-bottom: 2px solid var(--gold);
+  border-radius: 0 0 2px 0;
+}
+.folder-resize:hover { opacity: 0.9; }
+
+/* ── Inventory Item ── */
+.inv-item {
+  position: absolute; width: 80px;
+  display: flex; flex-direction: column; align-items: center;
+  cursor: grab; user-select: none; z-index: 2;
+  transition: filter 0.14s;
+}
+.inv-item:hover  { z-index: 20; filter: drop-shadow(0 4px 10px rgba(200,146,42,0.25)); }
+.inv-item.dragging { cursor: grabbing; z-index: 1000; filter: drop-shadow(0 10px 24px rgba(200,146,42,0.55)); }
+.inv-item.selected { z-index: 10; }
+.inv-item.merge-target {
+  filter: drop-shadow(0 0 14px var(--merge-glow)) drop-shadow(0 0 6px rgba(80,220,80,0.9));
+}
+
+.item-frame {
+  width: 72px; height: 72px; border: 2px solid var(--leather);
+  border-radius: 6px; background: rgba(0,0,0,0.45);
+  overflow: hidden; position: relative;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.inv-item:hover .item-frame  { border-color: var(--gold); box-shadow: 0 0 10px rgba(200,146,42,0.28); }
+.inv-item.selected .item-frame { border-color: var(--gold-shine); box-shadow: 0 0 0 2px var(--gold-shine), 0 0 22px rgba(232,184,75,0.5); }
+.inv-item.merge-target .item-frame { border-color: #60dd60; }
+.item-frame img { width: 100%; height: 100%; object-fit: contain; padding: 4px; image-rendering: pixelated; }
+
+.item-qty {
+  position: absolute; bottom: 2px; right: 4px;
+  font-family: var(--font-heading); font-size: 13px; color: #fff;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  pointer-events: none; line-height: 1;
+}
+.item-name {
+  font-family: var(--font-body); font-size: 10px; color: var(--parchment-dark);
+  text-align: center; margin-top: 4px; line-height: 1.2; max-width: 80px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 3px var(--deep-brown); pointer-events: none;
+}
+.inv-item.selected .item-name { color: var(--gold-shine); }
+
+@keyframes mergeFlash {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 16px rgba(80,255,80,0.9)); }
+  50%  { transform: scale(1.25); filter: drop-shadow(0 0 32px rgba(80,255,80,1)); }
+  100% { transform: scale(1);    filter: none; }
+}
+.merge-flash { animation: mergeFlash 0.4s ease; }
+
+/* ── Context Menu ── */
+.ctx-menu {
+  position: absolute; z-index: 200; display: none; flex-direction: column; gap: 3px;
+  background: linear-gradient(160deg,#1a0900,#2e1500); border: 1.5px solid var(--gold);
+  border-radius: 6px; padding: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.7), 0 0 12px rgba(200,146,42,0.18);
+  min-width: 128px; animation: ctxIn 0.15s ease forwards;
+}
+@keyframes ctxIn { from { opacity:0; transform:scale(0.88); } to { opacity:1; transform:scale(1); } }
+.ctx-menu.open { display: flex; }
+.ctx-menu::before {
+  content:''; position:absolute; left:-7px; top:50%; transform:translateY(-50%);
+  border:6px solid transparent; border-right-color:var(--gold);
+}
+.ctx-item-name {
+  font-family: var(--font-heading); font-size: 12px; color: var(--gold-light);
+  text-align: center; padding: 3px 6px 6px; border-bottom: 1px solid var(--leather);
+  margin-bottom: 2px; letter-spacing: 0.5px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 160px;
+}
+.ctx-btn {
+  font-family: var(--font-heading); font-size: 11px; padding: 6px 10px;
+  border: 1px solid var(--leather); border-radius: 4px;
+  background: rgba(200,146,42,0.06); color: var(--parchment-dark);
+  cursor: pointer; text-align: left; letter-spacing: 0.5px; transition: all 0.14s; white-space: nowrap;
+}
+.ctx-btn:hover { background: rgba(200,146,42,0.22); color: var(--gold-shine); border-color: var(--gold); }
+.ctx-btn .ctx-icon { margin-right: 6px; font-size: 13px; }
+.ctx-btn-remove { border-color: #6b2010; color: #c06050; }
+.ctx-btn-remove:hover { background: rgba(160,64,48,0.25); color: #ff8070; border-color: #c04030; }
+.ctx-btn-folder-sep { border-color: var(--folder-border); color: var(--parchment-dark); }
+.ctx-btn-folder-sep:hover { background: rgba(139,96,32,0.25); border-color: var(--gold-light); }
+
+/* ── Rename Input ── */
+.rename-input {
+  font-family: var(--font-body); font-size: 11px;
+  background: rgba(0,0,0,0.7); border: 1.5px solid var(--gold);
+  border-radius: 3px; color: var(--parchment); padding: 3px 6px;
+  outline: none; width: 78px; text-align: center; margin-top: 3px;
+}
+
+/* ── Bottom Control Panel ── */
+.item-controls {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+  background: linear-gradient(0deg,#0d0500 0%,rgba(20,8,0,0.97) 80%,transparent 100%);
+  border-top: 2px solid var(--gold);
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 0 22px;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
+  z-index: 20; pointer-events: none;
+}
+.item-controls.visible { transform: translateY(0); pointer-events: all; }
+
+.ctrl-name { font-family: var(--font-heading); font-size: 15px; color: var(--gold-light); min-width: 100px; text-align: center; }
+.ctrl-name span { font-family: var(--font-body); font-size: 11px; color: var(--parchment-dark); display: block; font-style: italic; }
+.ctrl-sep { width: 1px; height: 44px; background: var(--leather); opacity: 0.5; }
+.ctrl-qty-group { display: flex; align-items: center; gap: 9px; }
+.ctrl-qty-label { font-family: var(--font-heading); font-size: 10px; color: var(--gold); letter-spacing: 1px; }
+.ctrl-qty-val { font-family: var(--font-heading); font-size: 21px; color: var(--parchment); min-width: 40px; text-align: center; }
+
+.ctrl-btn {
+  width: 34px; height: 34px; border-radius: 4px; border: 1.5px solid var(--gold);
+  background: rgba(200,146,42,0.1); color: var(--gold-light); font-size: 19px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.13s; font-family: monospace;
+}
+.ctrl-btn:hover { background: rgba(200,146,42,0.28); transform: scale(1.1); }
+.ctrl-btn-remove { border-color: #a04030; color: #e06050; background: rgba(160,64,48,0.08); font-size: 14px; }
+.ctrl-btn-remove:hover { background: rgba(160,64,48,0.28); color: #ff8070; }
+.ctrl-btn-eject { border-color: var(--folder-border); color: var(--parchment-dark); font-size: 14px; background: rgba(139,96,32,0.1); }
+.ctrl-btn-eject:hover { background: rgba(139,96,32,0.28); color: var(--gold-light); border-color: var(--gold); }
+
+/* ── Toasts ── */
+.toast-container {
+  position: fixed; top: 75px; right: 14px;
+  display: flex; flex-direction: column; gap: 7px;
+  z-index: 999; pointer-events: none;
+}
+.toast {
+  background: linear-gradient(135deg,#2a1500,#3d2000); border: 1px solid var(--gold);
+  color: var(--parchment); font-family: var(--font-body); font-size: 13px;
+  padding: 7px 15px; border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5); animation: toastIn 0.25s ease forwards; font-style: italic;
+}
+.toast.warn { border-color: #c05020; background: linear-gradient(135deg,#3d1000,#5c2000); }
+.toast.out  { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn  { from { opacity:0; transform:translateX(36px); } to { opacity:1; transform:translateX(0); } }
+@keyframes toastOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(36px); } }
+
+/* ── Badge ── */
+.phaizona-badge {
+  position: fixed; bottom: 14px; right: 14px; z-index: 50;
+  display: flex; align-items: center; gap: 7px;
+  background: linear-gradient(135deg,rgba(10,4,0,0.92),rgba(26,13,0,0.88));
+  border: 1px solid var(--leather); border-radius: 5px; padding: 5px 10px 5px 8px;
+  text-decoration: none; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.phaizona-badge:hover { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,146,42,0.25); }
+.phaizona-rune { font-size: 16px; color: var(--gold); opacity: 0.75; line-height: 1; }
+.phaizona-text { display: flex; flex-direction: column; line-height: 1.2; }
+.phaizona-by   { font-family: var(--font-body); font-style: italic; font-size: 9px; color: var(--parchment-dark); opacity: 0.55; }
+.phaizona-name { font-family: var(--font-title); font-size: 13px; color: var(--gold-light); letter-spacing: 1px; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--deep-brown); }
+::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--leather-light); }
+  </style>
 </head>
 <body>
 
@@ -20,7 +496,6 @@
       <p class="header-subtitle">Scroll to zoom · Drag background to pan · Click item for actions · Same-name items merge on drop</p>
     </div>
     <div class="header-actions">
-      
       <button class="btn" id="exportBtn">⬇ Export</button>
       <button class="btn" id="importBtn">⬆ Import</button>
       <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
@@ -118,6 +593,894 @@
   </a>
 
   <input type="file" id="importInput" accept=".json" style="display:none" />
-  <script src="script.js"></script>
+
+  <script>
+/* ================================================================
+   FANTASY INVENTORY MANAGER — script.js
+
+   COORDINATE SYSTEM
+   ─────────────────
+   • Free items:   item.wx / item.wy  = world-space px (absolute in #canvasWorld)
+   • Foldered items: item.wx / item.wy = folder-body-relative px
+     (i.e. pixel offset inside the .folder-body div, which starts at
+      folder.wx + 0, folder.wy + HEADER_H in world-space)
+
+   FOLDER_HEADER_H must stay in sync with the CSS min-height of .folder-header.
+================================================================ */
+
+const FOLDER_HEADER_H = 34;
+const WORLD_W   = 3000;
+const WORLD_H   = 3000;
+const SCALE_MIN  = 0.25;
+const SCALE_MAX  = 3.0;
+const SCALE_STEP = 0.15;
+const MERGE_DIST = 60;
+
+/* ── State ── */
+let inventory  = [];
+let folders    = [];
+let selectedId  = null;
+let ctxTargetId = null;
+let view        = { x: 0, y: 0, scale: 1 };
+
+/* ── DOM refs ── */
+const viewport     = document.getElementById('canvasViewport');
+const world        = document.getElementById('canvasWorld');
+const uploadZone   = document.getElementById('uploadZone');
+const fileInput    = document.getElementById('fileInput');
+const previewImg   = document.getElementById('previewImg');
+const placeholder  = document.getElementById('uploadPlaceholder');
+const itemNameEl   = document.getElementById('itemName');
+const nameWarn     = document.getElementById('nameWarn');
+const qtyDisplay   = document.getElementById('qtyDisplay');
+const addBtn       = document.getElementById('addBtn');
+const itemCount    = document.getElementById('itemCount');
+const emptyMsg     = document.getElementById('emptyMsg');
+const itemControls = document.getElementById('itemControls');
+const ctrlName     = document.getElementById('ctrlName');
+const ctrlSub      = document.getElementById('ctrlSub');
+const ctrlQty      = document.getElementById('ctrlQty');
+const ctrlEject    = document.getElementById('ctrlEject');
+const toastCont    = document.getElementById('toastContainer');
+const importInput  = document.getElementById('importInput');
+const ctxMenu      = document.getElementById('ctxMenu');
+const zoomLabel    = document.getElementById('zoomLabel');
+const ctxEjectBtn  = document.getElementById('ctxEjectFolder');
+
+let sidebarQty = 1;
+let pendingImg  = null;
+
+/* ================================================================
+   UTILITIES
+================================================================ */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function toast(msg, warn = false) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (warn ? ' warn' : '');
+  el.textContent = msg;
+  toastCont.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }, warn ? 3200 : 2400);
+}
+
+function nameExists(name, excludeId = null) {
+  return inventory.some(
+    i => i.id !== excludeId && i.name.trim().toLowerCase() === name.trim().toLowerCase()
+  );
+}
+
+/* ── Convert folder-relative coords → world coords ── */
+function folderRelToWorld(item) {
+  const folder = folders.find(f => f.id === item.folderId);
+  if (!folder) return { x: item.wx, y: item.wy };
+  return {
+    x: folder.wx + item.wx,
+    y: folder.wy + FOLDER_HEADER_H + item.wy,
+  };
+}
+
+/* ── World centre of an item (item icon is 72px wide/tall) ── */
+function itemWorldCenter(item) {
+  if (item.folderId) {
+    const w = folderRelToWorld(item);
+    return { x: w.x + 40, y: w.y + 36 };
+  }
+  return { x: item.wx + 40, y: item.wy + 36 };
+}
+
+/* ── Is a world point inside a folder's body area? ── */
+function inFolderBody(wx, wy, folder) {
+  return wx >= folder.wx &&
+         wx <= folder.wx + folder.w &&
+         wy >= folder.wy + FOLDER_HEADER_H &&
+         wy <= folder.wy + folder.h + 40; // +40 grace for items near the bottom edge
+}
+
+/* ================================================================
+   PERSISTENCE
+================================================================ */
+const STORAGE_KEY = 'fantasy_inventory_v3';
+
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ inventory, folders, view })); }
+  catch (_) { toast('⚠ Storage full — export to back up!', true); }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data)) { inventory = data; return; }
+    if (data.inventory) inventory = data.inventory;
+    if (data.folders)   folders   = data.folders;
+    if (data.view)      view      = data.view;
+  } catch (_) { inventory = []; folders = []; }
+}
+
+/* ================================================================
+   EXPORT / IMPORT / CLEAR
+================================================================ */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!inventory.length && !folders.length) { toast('Nothing to export!'); return; }
+  const blob = new Blob(
+    [JSON.stringify({ inventory, folders, view }, null, 2)],
+    { type: 'application/json' }
+  );
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: 'fantasy_inventory.json',
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('⬇ Exported!');
+});
+
+document.getElementById('importBtn').addEventListener('click', () => importInput.click());
+importInput.addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) { inventory = data; folders = []; }
+      else if (data.inventory)  { inventory = data.inventory; folders = data.folders || []; if (data.view) view = data.view; }
+      else throw new Error();
+      save(); renderAll(); applyView();
+      toast('⬆ Inventory imported!');
+    } catch (_) { toast('✕ Invalid file.', true); }
+    importInput.value = '';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (!inventory.length && !folders.length) { toast('Already empty!'); return; }
+  if (!confirm('Clear your entire inventory and all folders?')) return;
+  inventory = []; folders = []; selectedId = null;
+  closeCtxMenu(); hideControls(); save(); renderAll();
+  toast('✕ Inventory cleared.');
+});
+
+/* ================================================================
+   VIEW — Pan & Zoom
+================================================================ */
+function applyView() {
+  world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+  zoomLabel.textContent = Math.round(view.scale * 100) + '%';
+}
+
+function zoomBy(delta, screenX, screenY) {
+  const newScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, view.scale + delta));
+  if (newScale === view.scale) return;
+  const vr = viewport.getBoundingClientRect();
+  const ox = screenX - vr.left;
+  const oy = screenY - vr.top;
+  const wx = (ox - view.x) / view.scale;
+  const wy = (oy - view.y) / view.scale;
+  view.scale = newScale;
+  view.x = ox - wx * view.scale;
+  view.y = oy - wy * view.scale;
+  applyView();
+}
+
+viewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomBy(e.deltaY < 0 ? SCALE_STEP : -SCALE_STEP, e.clientX, e.clientY);
+}, { passive: false });
+
+document.getElementById('zoomIn').addEventListener('click', () => {
+  const r = viewport.getBoundingClientRect();
+  zoomBy(SCALE_STEP, r.left + r.width / 2, r.top + r.height / 2);
+});
+document.getElementById('zoomOut').addEventListener('click', () => {
+  const r = viewport.getBoundingClientRect();
+  zoomBy(-SCALE_STEP, r.left + r.width / 2, r.top + r.height / 2);
+});
+document.getElementById('zoomReset').addEventListener('click', () => {
+  const vr = viewport.getBoundingClientRect();
+  view.scale = 1;
+  view.x = vr.width  / 2 - WORLD_W / 2;
+  view.y = vr.height / 2 - WORLD_H / 2;
+  applyView();
+});
+
+/* ── Pan ── */
+let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
+
+viewport.addEventListener('pointerdown', e => {
+  const bg = e.target === viewport || e.target === world ||
+             e.target.classList.contains('empty-msg') ||
+             e.target.classList.contains('empty-icon');
+  if (!bg) return;
+  closeCtxMenu(); deselectItem();
+  isPanning = true;
+  panStart  = { x: e.clientX, y: e.clientY };
+  viewStart = { x: view.x,    y: view.y };
+  viewport.setPointerCapture(e.pointerId);
+  viewport.style.cursor = 'grabbing';
+});
+viewport.addEventListener('pointermove', e => {
+  if (!isPanning) return;
+  view.x = viewStart.x + (e.clientX - panStart.x);
+  view.y = viewStart.y + (e.clientY - panStart.y);
+  applyView();
+});
+viewport.addEventListener('pointerup', () => {
+  isPanning = false;
+  viewport.style.cursor = '';
+  save();
+});
+
+/* ================================================================
+   SIDEBAR
+================================================================ */
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) readImg(e.target.files[0]); fileInput.value = ''; });
+uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) readImg(f);
+});
+
+function readImg(file) {
+  const r = new FileReader();
+  r.onload = ev => {
+    pendingImg = ev.target.result;
+    previewImg.src = pendingImg; previewImg.style.display = 'block';
+    placeholder.style.display = 'none';
+    checkReady();
+  };
+  r.readAsDataURL(file);
+}
+
+function checkReady() {
+  const name   = itemNameEl.value.trim();
+  const exists = name && nameExists(name);
+  nameWarn.classList.toggle('visible', !!exists);
+  itemNameEl.classList.toggle('error', !!exists);
+  addBtn.disabled = !(pendingImg && name && !exists);
+}
+
+itemNameEl.addEventListener('input', checkReady);
+document.getElementById('qtyMinus').addEventListener('click', () => { if (sidebarQty > 1) { sidebarQty--; qtyDisplay.textContent = sidebarQty; } });
+document.getElementById('qtyPlus').addEventListener('click',  () => { sidebarQty++; qtyDisplay.textContent = sidebarQty; });
+
+/* ================================================================
+   ADD ITEM
+================================================================ */
+addBtn.addEventListener('click', () => {
+  const name = itemNameEl.value.trim();
+  if (!name || !pendingImg) return;
+  if (nameExists(name)) { toast('⚠ An item with that name already exists!', true); return; }
+
+  const vr      = viewport.getBoundingClientRect();
+  const centreX = (vr.width  / 2 - view.x) / view.scale;
+  const centreY = (vr.height / 2 - view.y) / view.scale;
+  const scatter = 140;
+
+  const item = {
+    id: uid(), name, src: pendingImg, qty: sidebarQty,
+    wx: centreX + (Math.random() - 0.5) * scatter,
+    wy: centreY + (Math.random() - 0.5) * scatter,
+    folderId: null,
+  };
+  inventory.push(item);
+  save(); renderAll();
+
+  itemNameEl.value = ''; pendingImg = null; sidebarQty = 1;
+  qtyDisplay.textContent = '1';
+  previewImg.style.display = 'none'; previewImg.src = '';
+  placeholder.style.display = 'flex';
+  checkReady();
+  toast(`✦ "${name}" forged!`);
+});
+
+/* ================================================================
+   CREATE FOLDER
+================================================================ */
+function createFolder(name) {
+  const vr = viewport.getBoundingClientRect();
+  const cx = (vr.width  / 2 - view.x) / view.scale;
+  const cy = (vr.height / 2 - view.y) / view.scale;
+  const folder = { id: uid(), name, wx: cx - 120, wy: cy - 90, w: 260, h: 200 };
+  folders.push(folder);
+  save(); renderAll();
+  toast(`📁 Folder "${name}" created!`);
+  return folder;
+}
+
+/* ── FIX: HTML'de id="newFolderBtn" yoktu, kaldırıldı. Sadece sidebarFolderBtn kullanılıyor ── */
+document.getElementById('sidebarFolderBtn').addEventListener('click', () => {
+  const n = prompt('Folder name:', 'Pouch');
+  if (n && n.trim()) createFolder(n.trim());
+});
+
+/* ================================================================
+   RENDER ALL
+================================================================ */
+function renderAll() {
+  world.querySelectorAll('.inv-folder, .inv-item').forEach(el => el.remove());
+
+  folders.forEach(f => world.appendChild(buildFolderEl(f)));
+
+  inventory.forEach(item => {
+    const el = buildItemEl(item);
+    if (item.folderId) {
+      const bodyEl = world.querySelector(`.inv-folder[data-fid="${item.folderId}"] .folder-body`);
+      if (bodyEl) {
+        bodyEl.appendChild(el);
+      } else {
+        item.folderId = null;
+        world.appendChild(el);
+      }
+    } else {
+      world.appendChild(el);
+    }
+  });
+
+  folders.forEach(f => {
+    const cnt = inventory.filter(i => i.folderId === f.id).length;
+    const label = world.querySelector(`.inv-folder[data-fid="${f.id}"] .folder-count`);
+    if (label) label.textContent = cnt ? `${cnt} item${cnt !== 1 ? 's' : ''}` : '';
+  });
+
+  emptyMsg.style.display = (!inventory.length && !folders.length) ? 'block' : 'none';
+  updateCount();
+
+  if (selectedId) {
+    const el = world.querySelector(`[data-id="${selectedId}"]`);
+    if (el) el.classList.add('selected');
+  }
+}
+
+function updateCount() {
+  const total = inventory.reduce((s, i) => s + i.qty, 0);
+  itemCount.textContent = inventory.length
+    ? `${inventory.length} type${inventory.length > 1 ? 's' : ''} · ${total} total · ${folders.length} folder${folders.length !== 1 ? 's' : ''}`
+    : 'No items in inventory';
+}
+
+/* ================================================================
+   BUILD FOLDER ELEMENT
+================================================================ */
+function buildFolderEl(folder) {
+  const el = document.createElement('div');
+  el.className  = 'inv-folder';
+  el.dataset.fid = folder.id;
+  el.style.left   = folder.wx + 'px';
+  el.style.top    = folder.wy + 'px';
+  el.style.width  = folder.w  + 'px';
+  el.style.height = folder.h  + 'px';
+
+  el.innerHTML = `
+    <div class="folder-header">
+      <span class="folder-icon">📁</span>
+      <span class="folder-name-el">${folder.name}</span>
+      <div class="folder-actions">
+        <button class="folder-action-btn" title="Rename" data-action="rename">✎</button>
+        <button class="folder-action-btn danger" title="Delete folder" data-action="delete">✕</button>
+      </div>
+    </div>
+    <div class="folder-body"></div>
+    <div class="folder-count"></div>
+    <div class="folder-resize"></div>
+  `;
+
+  el.querySelector('[data-action="rename"]').addEventListener('click', e => {
+    e.stopPropagation();
+    const nameSpan = el.querySelector('.folder-name-el');
+    const input    = document.createElement('input');
+    input.className = 'folder-rename-input';
+    input.value     = folder.name;
+    nameSpan.replaceWith(input);
+    input.focus(); input.select();
+
+    function commit() {
+      folder.name = input.value.trim() || folder.name;
+      const restored = document.createElement('span');
+      restored.className   = 'folder-name-el';
+      restored.textContent = folder.name;
+      input.replaceWith(restored);
+      save();
+    }
+    input.addEventListener('blur', commit, { once: true });
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter')  { ev.preventDefault(); input.blur(); }
+      if (ev.key === 'Escape') { input.value = folder.name; input.blur(); }
+    });
+  });
+
+  el.querySelector('[data-action="delete"]').addEventListener('click', e => {
+    e.stopPropagation();
+    const inside = inventory.filter(i => i.folderId === folder.id).length;
+    const msg = inside > 0
+      ? `Delete folder "${folder.name}"? The ${inside} item(s) inside will be freed.`
+      : `Delete folder "${folder.name}"?`;
+    if (!confirm(msg)) return;
+    inventory.forEach(i => {
+      if (i.folderId === folder.id) {
+        const w = folderRelToWorld(i);
+        i.folderId = null;
+        i.wx = w.x;
+        i.wy = w.y;
+      }
+    });
+    folders = folders.filter(f => f.id !== folder.id);
+    save(); renderAll();
+    toast(`📁 Folder "${folder.name}" deleted.`);
+  });
+
+  const header = el.querySelector('.folder-header');
+  let fDragging  = false, fHasMoved = false;
+  let fMouseStart = { x: 0, y: 0 };
+  let fFolderStart = { x: 0, y: 0 };
+
+  header.addEventListener('pointerdown', e => {
+    if (e.target.closest('.folder-action-btn')) return;
+    e.stopPropagation();
+    closeCtxMenu(); deselectItem();
+    fDragging    = true; fHasMoved = false;
+    fMouseStart  = { x: e.clientX, y: e.clientY };
+    fFolderStart = { x: folder.wx, y: folder.wy };
+    header.setPointerCapture(e.pointerId);
+  });
+
+  header.addEventListener('pointermove', e => {
+    if (!fDragging) return;
+    const dx = (e.clientX - fMouseStart.x) / view.scale;
+    const dy = (e.clientY - fMouseStart.y) / view.scale;
+    if (!fHasMoved && Math.hypot(dx, dy) < 4) return;
+    fHasMoved = true;
+    el.classList.add('folder-dragging');
+    folder.wx = fFolderStart.x + dx;
+    folder.wy = fFolderStart.y + dy;
+    el.style.left = folder.wx + 'px';
+    el.style.top  = folder.wy + 'px';
+  });
+
+  header.addEventListener('pointerup', () => {
+    if (!fDragging) return;
+    fDragging = false;
+    el.classList.remove('folder-dragging');
+    if (fHasMoved) save();
+  });
+
+  const resizeHandle = el.querySelector('.folder-resize');
+  let rDragging = false, rStart = { x: 0, y: 0 }, rWStart = 0, rHStart = 0;
+
+  resizeHandle.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    rDragging = true;
+    rStart    = { x: e.clientX, y: e.clientY };
+    rWStart   = folder.w; rHStart = folder.h;
+    resizeHandle.setPointerCapture(e.pointerId);
+  });
+  resizeHandle.addEventListener('pointermove', e => {
+    if (!rDragging) return;
+    const dx = (e.clientX - rStart.x) / view.scale;
+    const dy = (e.clientY - rStart.y) / view.scale;
+    folder.w = Math.max(160, rWStart + dx);
+    folder.h = Math.max(120, rHStart + dy);
+    el.style.width  = folder.w + 'px';
+    el.style.height = folder.h + 'px';
+  });
+  resizeHandle.addEventListener('pointerup', () => { rDragging = false; save(); });
+
+  return el;
+}
+
+/* ================================================================
+   BUILD ITEM ELEMENT
+================================================================ */
+function buildItemEl(item) {
+  const el = document.createElement('div');
+  el.className  = 'inv-item';
+  el.dataset.id = item.id;
+  el.style.left = item.wx + 'px';
+  el.style.top  = item.wy + 'px';
+
+  el.innerHTML = `
+    <div class="item-frame">
+      <img src="${item.src}" alt="${item.name}" draggable="false"/>
+      <div class="item-qty">${item.qty > 1 ? item.qty : ''}</div>
+    </div>
+    <div class="item-name">${item.name}</div>
+  `;
+
+  let dragging    = false, hasMoved = false;
+  let mouseStart  = { x: 0, y: 0 };
+  let dragWorldStart = { x: 0, y: 0 };
+  let mergeTargetId  = null;
+
+  el.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    closeCtxMenu();
+    dragging  = true;
+    hasMoved  = false;
+    mouseStart = { x: e.clientX, y: e.clientY };
+
+    // Record world-space top-left of item at drag start
+    if (item.folderId) {
+      const worldPos = folderRelToWorld(item);
+      dragWorldStart = { x: worldPos.x, y: worldPos.y };
+    } else {
+      dragWorldStart = { x: item.wx, y: item.wy };
+    }
+
+    el.setPointerCapture(e.pointerId);
+  });
+
+  el.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = (e.clientX - mouseStart.x) / view.scale;
+    const dy = (e.clientY - mouseStart.y) / view.scale;
+    if (!hasMoved && Math.hypot(dx, dy) < 5) return;
+
+    if (!hasMoved) {
+      hasMoved = true;
+      el.classList.add('dragging');
+
+      if (item.folderId) {
+        // Reparent to world for visual drag — position already set via dragWorldStart
+        el.style.left = dragWorldStart.x + 'px';
+        el.style.top  = dragWorldStart.y + 'px';
+        world.appendChild(el);
+      }
+    }
+
+    const wx = dragWorldStart.x + dx;
+    const wy = dragWorldStart.y + dy;
+    el.style.left = wx + 'px';
+    el.style.top  = wy + 'px';
+
+    const cx = wx + 40;
+    const cy = wy + 36;
+
+    if (mergeTargetId) {
+      const prev = world.querySelector(`[data-id="${mergeTargetId}"]`);
+      if (prev) prev.classList.remove('merge-target');
+      mergeTargetId = null;
+    }
+    const candidate = findMergeCandidate(item, cx, cy);
+    if (candidate) {
+      mergeTargetId = candidate.id;
+      const cEl = world.querySelector(`[data-id="${candidate.id}"]`);
+      if (cEl) cEl.classList.add('merge-target');
+    }
+
+    folders.forEach(f => {
+      const fEl = world.querySelector(`.inv-folder[data-fid="${f.id}"]`);
+      if (!fEl) return;
+      const inside = inFolderBody(cx, cy, f);
+      fEl.classList.toggle('drag-over-folder', inside && item.folderId !== f.id);
+    });
+  });
+
+  el.addEventListener('pointerup', e => {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove('dragging');
+    world.querySelectorAll('.inv-folder').forEach(f => f.classList.remove('drag-over-folder'));
+
+    if (!hasMoved) {
+      openCtxMenu(item.id, e.clientX, e.clientY);
+      return;
+    }
+
+    const curWx = parseFloat(el.style.left);
+    const curWy = parseFloat(el.style.top);
+    const cx = curWx + 40;
+    const cy = curWy + 36;
+
+    if (mergeTargetId) {
+      const target = inventory.find(i => i.id === mergeTargetId);
+      if (target) {
+        target.qty += item.qty;
+        const tEl = world.querySelector(`[data-id="${target.id}"]`);
+        if (tEl) {
+          tEl.classList.remove('merge-target');
+          tEl.classList.add('merge-flash');
+          tEl.addEventListener('animationend', () => tEl.classList.remove('merge-flash'), { once: true });
+        }
+        inventory = inventory.filter(i => i.id !== item.id);
+        if (selectedId === item.id) { selectedId = null; hideControls(); }
+        toast(`⚗ Merged into "${target.name}" (×${target.qty})`);
+        save(); renderAll();
+        return;
+      }
+    }
+
+    const hitFolder = folders.find(f => f.id !== item.folderId && inFolderBody(cx, cy, f));
+    if (hitFolder) {
+      item.folderId = hitFolder.id;
+      item.wx = curWx - hitFolder.wx;
+      item.wy = curWy - hitFolder.wy - FOLDER_HEADER_H;
+      item.wx = Math.max(0, item.wx);
+      item.wy = Math.max(0, item.wy);
+      toast(`📁 "${item.name}" added to "${hitFolder.name}"`);
+      save(); renderAll();
+      if (selectedId === item.id) selectItem(item.id);
+      return;
+    }
+
+    if (item.folderId) {
+      const ownFolder = folders.find(f => f.id === item.folderId);
+      if (ownFolder && !inFolderBody(cx, cy, ownFolder)) {
+        item.folderId = null;
+        item.wx = curWx;
+        item.wy = curWy;
+        toast(`📤 "${item.name}" removed from folder`);
+        save(); renderAll();
+        if (selectedId === item.id) selectItem(item.id);
+        return;
+      }
+    }
+
+    if (item.folderId) {
+      const ownFolder = folders.find(f => f.id === item.folderId);
+      if (ownFolder) {
+        item.wx = curWx - ownFolder.wx;
+        item.wy = curWy - ownFolder.wy - FOLDER_HEADER_H;
+        item.wx = Math.max(0, item.wx);
+        item.wy = Math.max(0, item.wy);
+      }
+    } else {
+      item.wx = curWx;
+      item.wy = curWy;
+    }
+    save(); renderAll();
+    if (selectedId === item.id) selectItem(item.id);
+  });
+
+  return el;
+}
+
+/* ── Find same-name item close enough to merge ── */
+function findMergeCandidate(dragged, worldCx, worldCy) {
+  return inventory.find(other => {
+    if (other.id === dragged.id) return false;
+    if (other.name.trim().toLowerCase() !== dragged.name.trim().toLowerCase()) return false;
+    const c = itemWorldCenter(other);
+    return Math.hypot(worldCx - c.x, worldCy - c.y) < MERGE_DIST;
+  });
+}
+
+/* ================================================================
+   CONTEXT MENU
+================================================================ */
+function openCtxMenu(id, screenX, screenY) {
+  ctxTargetId = id;
+  const item  = inventory.find(i => i.id === id);
+  if (!item) return;
+
+  selectItem(id);
+
+  document.getElementById('ctxTitle').textContent = item.name;
+  const takeOneBtn = document.getElementById('ctxTakeOne');
+  takeOneBtn.disabled      = item.qty < 2;
+  takeOneBtn.style.opacity = item.qty < 2 ? '0.4' : '1';
+  ctxEjectBtn.style.display = item.folderId ? 'block' : 'none';
+
+  const vr    = viewport.getBoundingClientRect();
+  const menuW = 160, menuH = 190;
+  const left  = Math.min(screenX - vr.left + 12, vr.width  - menuW - 8);
+  const top   = Math.min(screenY - vr.top  - 20, vr.height - menuH - 90);
+
+  ctxMenu.style.left = left + 'px';
+  ctxMenu.style.top  = top  + 'px';
+  ctxMenu.classList.add('open');
+}
+
+function closeCtxMenu() {
+  ctxMenu.classList.remove('open');
+  ctxTargetId = null;
+}
+
+viewport.addEventListener('pointerdown', e => {
+  if (!ctxMenu.contains(e.target)) closeCtxMenu();
+}, true);
+
+document.getElementById('ctxTakeOne').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === ctxTargetId);
+  if (!item || item.qty < 2) return;
+  item.qty--;
+  const offset = 90 + Math.random() * 40;
+  const angle  = Math.random() * Math.PI * 2;
+  const w = folderRelToWorld(item);
+  const single = {
+    id: uid(), name: item.name, src: item.src, qty: 1,
+    wx: w.x + Math.cos(angle) * offset,
+    wy: w.y + Math.sin(angle) * offset,
+    folderId: null,
+  };
+  inventory.push(single);
+  closeCtxMenu(); save(); renderAll();
+  selectItem(single.id);
+  toast(`☝ Took 1 × ${item.name}`);
+});
+
+document.getElementById('ctxClone').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === ctxTargetId);
+  if (!item) return;
+  const offset = 100 + Math.random() * 40;
+  const angle  = Math.random() * Math.PI * 2;
+  const w = folderRelToWorld(item);
+  const clone = {
+    id: uid(), name: item.name, src: item.src, qty: item.qty,
+    wx: w.x + Math.cos(angle) * offset,
+    wy: w.y + Math.sin(angle) * offset,
+    folderId: null,
+  };
+  inventory.push(clone);
+  closeCtxMenu(); save(); renderAll();
+  selectItem(clone.id);
+  toast(`⎘ Cloned "${item.name}"`);
+});
+
+document.getElementById('ctxRename').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === ctxTargetId);
+  if (!item) return;
+  closeCtxMenu();
+
+  const el      = world.querySelector(`[data-id="${item.id}"]`);
+  const nameDiv = el.querySelector('.item-name');
+  const input   = document.createElement('input');
+  input.type      = 'text';
+  input.className = 'rename-input';
+  input.value     = item.name;
+  input.maxLength = 40;
+  nameDiv.replaceWith(input);
+  input.focus(); input.select();
+
+  function commitRename() {
+    const newName = input.value.trim() || item.name;
+    if (newName !== item.name && nameExists(newName, item.id)) {
+      toast('⚠ An item with that name already exists!', true);
+    } else {
+      item.name = newName;
+      toast(`✎ Renamed to "${item.name}"`);
+    }
+    save(); renderAll(); selectItem(item.id);
+  }
+  input.addEventListener('blur',    commitRename, { once: true });
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { ev.preventDefault(); input.blur(); }
+    if (ev.key === 'Escape') { input.value = item.name; input.blur(); }
+  });
+});
+
+ctxEjectBtn.addEventListener('click', () => { ejectFromFolder(ctxTargetId); closeCtxMenu(); });
+
+document.getElementById('ctxRemove').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === ctxTargetId);
+  if (!item) return;
+  if (!confirm(`Remove "${item.name}"?`)) return;
+  removeItem(item.id); closeCtxMenu();
+});
+
+/* ================================================================
+   SELECTION & BOTTOM PANEL
+================================================================ */
+function selectItem(id) {
+  if (selectedId) {
+    const prev = world.querySelector(`[data-id="${selectedId}"]`);
+    if (prev) prev.classList.remove('selected');
+  }
+  selectedId = id;
+  const item = inventory.find(i => i.id === id);
+  if (!item) return;
+  const el = world.querySelector(`[data-id="${id}"]`);
+  if (el) el.classList.add('selected');
+
+  ctrlName.childNodes[0].textContent = item.name;
+  ctrlSub.textContent = 'selected';
+  ctrlQty.textContent = item.qty;
+  ctrlEject.style.display = item.folderId ? 'flex' : 'none';
+  itemControls.classList.add('visible');
+}
+
+function deselectItem() {
+  if (selectedId) {
+    const el = world.querySelector(`[data-id="${selectedId}"]`);
+    if (el) el.classList.remove('selected');
+  }
+  selectedId = null;
+  hideControls();
+}
+
+function hideControls() { itemControls.classList.remove('visible'); }
+
+document.getElementById('ctrlPlus').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === selectedId); if (!item) return;
+  item.qty++;
+  ctrlQty.textContent = item.qty;
+  const badge = world.querySelector(`[data-id="${selectedId}"] .item-qty`);
+  if (badge) badge.textContent = item.qty > 1 ? item.qty : '';
+  save(); updateCount();
+});
+
+document.getElementById('ctrlMinus').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === selectedId); if (!item) return;
+  if (item.qty > 1) {
+    item.qty--;
+    ctrlQty.textContent = item.qty;
+    const badge = world.querySelector(`[data-id="${selectedId}"] .item-qty`);
+    if (badge) badge.textContent = item.qty > 1 ? item.qty : '';
+    save(); updateCount();
+  } else {
+    if (confirm(`Remove "${item.name}"?`)) removeItem(item.id);
+  }
+});
+
+document.getElementById('ctrlRemove').addEventListener('click', () => {
+  const item = inventory.find(i => i.id === selectedId);
+  if (item && confirm(`Remove "${item.name}"?`)) removeItem(item.id);
+});
+
+ctrlEject.addEventListener('click', () => ejectFromFolder(selectedId));
+
+function ejectFromFolder(id) {
+  const item = inventory.find(i => i.id === id);
+  if (!item || !item.folderId) return;
+  const w = folderRelToWorld(item);
+  const folder = folders.find(f => f.id === item.folderId);
+  item.folderId = null;
+  item.wx = folder ? folder.wx + folder.w + 20 : w.x;
+  item.wy = folder ? folder.wy + 40             : w.y;
+  save(); renderAll(); selectItem(id);
+  toast(`📤 "${item.name}" removed from folder`);
+}
+
+function removeItem(id) {
+  const item = inventory.find(i => i.id === id);
+  const name = item ? item.name : 'Item';
+  inventory = inventory.filter(i => i.id !== id);
+  if (selectedId === id) { selectedId = null; hideControls(); }
+  save(); renderAll();
+  toast(`✕ "${name}" removed.`);
+}
+
+/* ================================================================
+   INIT
+================================================================ */
+load();
+
+requestAnimationFrame(() => {
+  const vr = viewport.getBoundingClientRect();
+  if (view.x === 0 && view.y === 0 && view.scale === 1) {
+    view.x = vr.width  / 2 - WORLD_W / 2;
+    view.y = vr.height / 2 - WORLD_H / 2;
+  }
+  applyView();
+});
+
+renderAll();
+  </script>
 </body>
 </html>
