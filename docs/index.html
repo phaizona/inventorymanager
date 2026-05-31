@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fantasy Inventory Manager</title>
+
+  <!-- ============================================================
+       FANTASY INVENTORY MANAGER
+       Template by: Phaizona
+
+       FEATURES:
+       - Zoomable & pannable infinite canvas (scroll to zoom, drag bg to pan)
+       - Item drag & drop repositioning
+       - Click item → radial context menu (Take One, Clone, Rename)
+       - Bottom control panel (qty +/-, remove) on item click
+       - Image upload + name input to forge new items
+       - LocalStorage auto-save on every change
+       - JSON export / import for backup & sharing
+       ============================================================ -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Uncial+Antiqua&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       CSS CUSTOM PROPERTIES — Retheme the whole UI by editing here
+       ============================================================ */
+    :root {
+      --parchment:      #e8d5a3;
+      --parchment-dark: #c9a96e;
+      --ink:            #2a1a05;
+      --ink-faded:      #5c3d1a;
+      --gold:           #c8922a;
+      --gold-light:     #e8b84b;
+      --gold-shine:     #f5d87a;
+      --deep-brown:     #1a0d00;
+      --leather:        #6b3a1f;
+      --leather-light:  #8b5e3c;
+      --shadow:         rgba(26,13,0,0.7);
+      --font-title:     'Uncial Antiqua', serif;
+      --font-heading:   'MedievalSharp', serif;
+      --font-body:      'Crimson Pro', serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--deep-brown);
+      color: var(--parchment);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    /* ============================================================
+       HEADER
+       ============================================================ */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 20px 8px 56px; /* left padding leaves room for watermark */
+      background: linear-gradient(180deg, #0d0500 0%, #2a1200 60%, #1a0d00 100%);
+      border-bottom: 3px solid var(--gold);
+      box-shadow: 0 4px 20px rgba(200,146,42,0.3);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+    header::before, header::after {
+      content: '᛭';
+      font-size: 20px;
+      color: var(--gold);
+      opacity: 0.4;
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+    }
+    header::before { left: 56px; }
+    header::after  { right: 10px; }
+
+    .header-center { flex: 1; text-align: center; }
+    .header-title {
+      font-family: var(--font-title);
+      font-size: clamp(16px, 2.2vw, 26px);
+      color: var(--gold-light);
+      text-shadow: 0 0 18px var(--gold), 0 2px 4px var(--deep-brown);
+      letter-spacing: 2px;
+    }
+    .header-subtitle {
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: 11px;
+      color: var(--parchment-dark);
+      opacity: 0.65;
+    }
+
+    .header-actions { display: flex; gap: 5px; align-items: center; }
+
+    /* Generic styled button */
+    .btn {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      padding: 5px 12px;
+      border: 1.5px solid var(--gold);
+      background: linear-gradient(135deg, #2a1500, #3d2000);
+      color: var(--gold-light);
+      cursor: pointer;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+      transition: all 0.18s;
+    }
+    .btn:hover { background: linear-gradient(135deg, #3d2200, #5c3500); color: var(--gold-shine); box-shadow: 0 0 10px rgba(200,146,42,0.35); }
+    .btn:active { transform: scale(0.96); }
+    .btn-danger { border-color: #a04030; color: #e06050; }
+    .btn-danger:hover { background: linear-gradient(135deg, #3d1010, #5c1a1a); color: #ff8070; }
+
+    /* ============================================================
+       MAIN LAYOUT
+       ============================================================ */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ============================================================
+       SIDEBAR
+       ============================================================ */
+    .sidebar {
+      width: 230px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, #1a0d00 0%, #0d0500 100%);
+      border-right: 3px solid var(--gold);
+      display: flex;
+      flex-direction: column;
+      padding: 14px 11px 14px;
+      gap: 12px;
+      overflow-y: auto;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+      position: relative;
+      z-index: 5;
+    }
+
+    .sidebar-title {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      color: var(--gold);
+      text-align: center;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--leather);
+    }
+    .sidebar-title::before, .sidebar-title::after {
+      content: '✦';
+      color: var(--gold-light);
+      font-size: 9px;
+      margin: 0 5px;
+    }
+
+    /* Phaizona brand text between sections — replaces rune divider */
+    .brand-divider {
+      text-align: center;
+      font-family: var(--font-title);
+      font-size: 13px;
+      color: var(--gold);
+      opacity: 0.55;
+      letter-spacing: 3px;
+      padding: 2px 0;
+    }
+
+    .upload-zone {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 2px dashed var(--leather-light);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.02);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.22s;
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-zone:hover { border-color: var(--gold); background: rgba(200,146,42,0.06); }
+    .upload-zone.drag-over { border-color: var(--gold-shine); box-shadow: inset 0 0 20px rgba(200,146,42,0.2); }
+    .upload-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+    .upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
+    .upload-icon { font-size: 30px; opacity: 0.45; }
+    .upload-hint { font-size: 11px; color: var(--parchment-dark); text-align: center; line-height: 1.4; font-style: italic; }
+    #fileInput { display: none; }
+
+    .field-label {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .fancy-input {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1.5px solid var(--leather);
+      border-radius: 4px;
+      color: var(--parchment);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 7px 9px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .fancy-input:focus { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,146,42,0.22); }
+    .fancy-input::placeholder { color: var(--ink-faded); font-style: italic; }
+
+    .qty-row { display: flex; align-items: center; gap: 7px; }
+    .qty-btn {
+      width: 26px; height: 26px;
+      background: rgba(200,146,42,0.14);
+      border: 1.5px solid var(--gold);
+      color: var(--gold-light);
+      font-size: 17px;
+      cursor: pointer;
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.14s;
+      line-height: 1;
+    }
+    .qty-btn:hover { background: rgba(200,146,42,0.3); }
+    .qty-display {
+      flex: 1; text-align: center;
+      font-family: var(--font-heading);
+      font-size: 15px;
+      color: var(--parchment);
+      background: rgba(0,0,0,0.3);
+      border: 1.5px solid var(--leather);
+      border-radius: 3px;
+      padding: 3px 0;
+    }
+
+    .btn-add {
+      width: 100%;
+      padding: 9px;
+      font-family: var(--font-heading);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      background: linear-gradient(135deg, #3d2200, #6b3a00);
+      border: 2px solid var(--gold);
+      color: var(--gold-shine);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .btn-add::before { content: '⚔'; margin-right: 7px; }
+    .btn-add:hover { background: linear-gradient(135deg, #5c3500, #8b5200); box-shadow: 0 0 16px rgba(200,146,42,0.4); transform: translateY(-1px); }
+    .btn-add:active { transform: translateY(0); }
+    .btn-add:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      text-align: center;
+      font-size: 10px;
+      color: var(--ink-faded);
+      font-style: italic;
+      padding-top: 8px;
+      border-top: 1px solid var(--leather);
+    }
+
+    /* ============================================================
+       CANVAS VIEWPORT — clipping container, never scrolls
+       ============================================================ */
+    .canvas-viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      /* Leather/wood background with vignette */
+      background:
+        radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%),
+        repeating-linear-gradient(92deg, transparent 0, transparent 80px, rgba(0,0,0,0.035) 80px, rgba(0,0,0,0.035) 81px),
+        repeating-linear-gradient(2deg,  transparent 0, transparent 60px, rgba(0,0,0,0.025) 60px, rgba(0,0,0,0.025) 61px),
+        linear-gradient(160deg, #3d2510 0%, #2a1500 50%, #1a0d00 100%);
+    }
+
+    /* ============================================================
+       CANVAS WORLD — the infinite surface that gets transformed
+       Items are placed in here using world-space coordinates (px)
+       ============================================================ */
+    #canvasWorld {
+      position: absolute;
+      top: 0; left: 0;
+      width: 3000px;    /* World width — items live in this space  */
+      height: 3000px;   /* World height */
+      transform-origin: 0 0;
+      will-change: transform;
+    }
+
+    /* Faint concentric rune rings as a background watermark */
+    #canvasWorld::before {
+      content: '';
+      position: absolute;
+      top: 1500px; left: 1500px;
+      transform: translate(-50%, -50%);
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      border: 1px solid rgba(200,146,42,0.05);
+      box-shadow:
+        0 0 0 50px  rgba(200,146,42,0.025),
+        0 0 0 120px rgba(200,146,42,0.018),
+        0 0 0 200px rgba(200,146,42,0.012),
+        0 0 0 350px rgba(200,146,42,0.006);
+      pointer-events: none;
+    }
+
+    /* Empty-state message rendered inside world at centre */
+    .empty-msg {
+      position: absolute;
+      top: 1500px; left: 1500px;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: var(--leather-light);
+      font-style: italic;
+      opacity: 0.38;
+      pointer-events: none;
+      line-height: 2;
+      font-size: 15px;
+    }
+    .empty-msg .empty-icon { font-size: 46px; display: block; margin-bottom: 8px; }
+
+    /* ============================================================
+       ZOOM CONTROLS — small overlay top-right of canvas
+       ============================================================ */
+    .zoom-controls {
+      position: absolute;
+      top: 12px; right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 15;
+    }
+    .zoom-btn {
+      width: 30px; height: 30px;
+      background: rgba(26,13,0,0.82);
+      border: 1.5px solid var(--leather);
+      color: var(--gold-light);
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      font-family: monospace;
+    }
+    .zoom-btn:hover { border-color: var(--gold); background: rgba(200,146,42,0.18); }
+    .zoom-label {
+      text-align: center;
+      font-family: var(--font-heading);
+      font-size: 10px;
+      color: var(--parchment-dark);
+      opacity: 0.6;
+    }
+
+    /* ============================================================
+       INVENTORY ITEM
+       ============================================================ */
+    .inv-item {
+      position: absolute;
+      width: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: grab;
+      user-select: none;
+      z-index: 2;
+      /* Smooth hover lift */
+      transition: filter 0.14s;
+    }
+    .inv-item:hover  { z-index: 5; filter: drop-shadow(0 4px 10px rgba(200,146,42,0.25)); }
+    .inv-item.dragging { cursor: grabbing; z-index: 100; filter: drop-shadow(0 10px 24px rgba(200,146,42,0.55)); }
+    .inv-item.selected { z-index: 6; }
+
+    .item-frame {
+      width: 72px; height: 72px;
+      border: 2px solid var(--leather);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.45);
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .inv-item:hover .item-frame  { border-color: var(--gold); box-shadow: 0 0 10px rgba(200,146,42,0.28); }
+    .inv-item.selected .item-frame {
+      border-color: var(--gold-shine);
+      box-shadow: 0 0 0 2px var(--gold-shine), 0 0 22px rgba(232,184,75,0.5);
+    }
+    .item-frame img { width: 100%; height: 100%; object-fit: contain; padding: 4px; image-rendering: pixelated; }
+
+    /* Minecraft-style quantity badge bottom-right */
+    .item-qty {
+      position: absolute;
+      bottom: 2px; right: 4px;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      color: #fff;
+      text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* Name label under the frame */
+    .item-name {
+      font-family: var(--font-body);
+      font-size: 10px;
+      color: var(--parchment-dark);
+      text-align: center;
+      margin-top: 4px;
+      line-height: 1.2;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px var(--deep-brown);
+      pointer-events: none;
+    }
+    .inv-item.selected .item-name { color: var(--gold-shine); }
+
+    /* ============================================================
+       CONTEXT MENU — appears on click near the item
+       Three actions: Take One, Clone, Rename
+       ============================================================ */
+    .ctx-menu {
+      position: absolute;
+      z-index: 200;
+      display: none; /* shown via JS */
+      flex-direction: column;
+      gap: 3px;
+      background: linear-gradient(160deg, #1a0900, #2e1500);
+      border: 1.5px solid var(--gold);
+      border-radius: 6px;
+      padding: 6px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.7), 0 0 12px rgba(200,146,42,0.18);
+      min-width: 128px;
+      /* Small pointer triangle pointing left */
+      animation: ctxIn 0.15s ease forwards;
+    }
+    @keyframes ctxIn {
+      from { opacity:0; transform: scale(0.88); }
+      to   { opacity:1; transform: scale(1); }
+    }
+    .ctx-menu.open { display: flex; }
+
+    /* Arrow pip on the left side */
+    .ctx-menu::before {
+      content: '';
+      position: absolute;
+      left: -7px; top: 50%; transform: translateY(-50%);
+      border: 6px solid transparent;
+      border-right-color: var(--gold);
+    }
+
+    .ctx-item-name {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      color: var(--gold-light);
+      text-align: center;
+      padding: 3px 6px 6px;
+      border-bottom: 1px solid var(--leather);
+      margin-bottom: 2px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+
+    .ctx-btn {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      padding: 6px 10px;
+      border: 1px solid var(--leather);
+      border-radius: 4px;
+      background: rgba(200,146,42,0.06);
+      color: var(--parchment-dark);
+      cursor: pointer;
+      text-align: left;
+      letter-spacing: 0.5px;
+      transition: all 0.14s;
+      white-space: nowrap;
+    }
+    .ctx-btn:hover { background: rgba(200,146,42,0.22); color: var(--gold-shine); border-color: var(--gold); }
+    .ctx-btn .ctx-icon { margin-right: 6px; font-size: 13px; }
+
+    .ctx-btn-remove { border-color: #6b2010; color: #c06050; }
+    .ctx-btn-remove:hover { background: rgba(160,64,48,0.25); color: #ff8070; border-color: #c04030; }
+
+    /* ============================================================
+       RENAME INPUT — inline editor that replaces the name label
+       ============================================================ */
+    .rename-input {
+      font-family: var(--font-body);
+      font-size: 11px;
+      background: rgba(0,0,0,0.7);
+      border: 1.5px solid var(--gold);
+      border-radius: 3px;
+      color: var(--parchment);
+      padding: 3px 6px;
+      outline: none;
+      width: 78px;
+      text-align: center;
+      margin-top: 3px;
+    }
+
+    /* ============================================================
+       BOTTOM CONTROL PANEL — slides up when item is selected
+       ============================================================ */
+    .item-controls {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      background: linear-gradient(0deg, #0d0500 0%, rgba(20,8,0,0.97) 80%, transparent 100%);
+      border-top: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 0 22px;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.22,1,0.36,1);
+      z-index: 20;
+      pointer-events: none;
+    }
+    .item-controls.visible { transform: translateY(0); pointer-events: all; }
+
+    .ctrl-name {
+      font-family: var(--font-heading);
+      font-size: 15px;
+      color: var(--gold-light);
+      min-width: 100px;
+      text-align: center;
+    }
+    .ctrl-name span { font-family: var(--font-body); font-size: 11px; color: var(--parchment-dark); display: block; font-style: italic; }
+
+    .ctrl-sep { width: 1px; height: 44px; background: var(--leather); opacity: 0.5; }
+
+    .ctrl-qty-group { display: flex; align-items: center; gap: 9px; }
+    .ctrl-qty-label { font-family: var(--font-heading); font-size: 10px; color: var(--gold); letter-spacing: 1px; }
+    .ctrl-qty-val { font-family: var(--font-heading); font-size: 21px; color: var(--parchment); min-width: 40px; text-align: center; }
+
+    .ctrl-btn {
+      width: 34px; height: 34px;
+      border-radius: 4px;
+      border: 1.5px solid var(--gold);
+      background: rgba(200,146,42,0.1);
+      color: var(--gold-light);
+      font-size: 19px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.13s;
+      font-family: monospace;
+    }
+    .ctrl-btn:hover { background: rgba(200,146,42,0.28); transform: scale(1.1); }
+    .ctrl-btn-remove { border-color: #a04030; color: #e06050; background: rgba(160,64,48,0.08); font-size: 14px; }
+    .ctrl-btn-remove:hover { background: rgba(160,64,48,0.28); color: #ff8070; }
+
+    /* ============================================================
+       TOAST NOTIFICATIONS
+       ============================================================ */
+    .toast-container {
+      position: fixed;
+      top: 75px; right: 14px;
+      display: flex; flex-direction: column;
+      gap: 7px;
+      z-index: 999;
+      pointer-events: none;
+    }
+    .toast {
+      background: linear-gradient(135deg, #2a1500, #3d2000);
+      border: 1px solid var(--gold);
+      color: var(--parchment);
+      font-family: var(--font-body);
+      font-size: 13px;
+      padding: 7px 15px;
+      border-radius: 4px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      animation: toastIn 0.25s ease forwards;
+      font-style: italic;
+    }
+    .toast.out { animation: toastOut 0.25s ease forwards; }
+    @keyframes toastIn  { from { opacity:0; transform:translateX(36px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes toastOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(36px); } }
+
+    /* ============================================================
+       MADE BY PHAIZONA — bottom-left corner badge
+       ============================================================ */
+    .phaizona-badge {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: linear-gradient(135deg, rgba(10,4,0,0.92), rgba(26,13,0,0.88));
+      border: 1px solid var(--leather);
+      border-radius: 5px;
+      padding: 5px 10px 5px 8px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .phaizona-badge:hover { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,146,42,0.25); }
+    .phaizona-rune {
+      font-size: 16px;
+      color: var(--gold);
+      opacity: 0.75;
+      line-height: 1;
+    }
+    .phaizona-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+    .phaizona-by   { font-family: var(--font-body); font-style: italic; font-size: 9px; color: var(--parchment-dark); opacity: 0.55; }
+    .phaizona-name { font-family: var(--font-title); font-size: 13px; color: var(--gold-light); letter-spacing: 1px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--deep-brown); }
+    ::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--leather-light); }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header>
+    <div style="width:160px"></div><!-- Spacer so title stays centred -->
+    <div class="header-center">
+      <p class="header-title">⚔ The Adventurer's Satchel ⚔</p>
+      <p class="header-subtitle">Scroll to zoom · Drag background to pan · Click item for actions</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="exportBtn">⬇ Export</button>
+      <button class="btn" id="importBtn">⬆ Import</button>
+      <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       MAIN
+       ============================================================ -->
+  <div class="main">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-title">Item Forge</div>
+
+      <!-- Image upload zone -->
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-placeholder" id="uploadPlaceholder">
+          <span class="upload-icon">🎒</span>
+          <span class="upload-hint">Drop image here<br/>or click to browse</span>
+        </div>
+        <img id="previewImg" src="" alt="" style="display:none" />
+      </div>
+      <input type="file" id="fileInput" accept="image/*" />
+
+      <!-- Name field -->
+      <div>
+        <p class="field-label">Item Name</p>
+        <input class="fancy-input" type="text" id="itemName" placeholder="e.g. Dragon Scale…" maxlength="40" />
+      </div>
+
+      <!-- Quantity spinner -->
+      <div>
+        <p class="field-label">Quantity</p>
+        <div class="qty-row">
+          <button class="qty-btn" id="qtyMinus">−</button>
+          <div class="qty-display" id="qtyDisplay">1</div>
+          <button class="qty-btn" id="qtyPlus">+</button>
+        </div>
+      </div>
+
+      <!-- Brand divider — "Phaizona" in runic style -->
+      <div class="brand-divider">Phaizona</div>
+
+      <button class="btn-add" id="addBtn" disabled>Add to Inventory</button>
+
+      <div class="sidebar-footer" id="itemCount">No items in inventory</div>
+    </aside>
+
+    <!-- CANVAS VIEWPORT -->
+    <div class="canvas-viewport" id="canvasViewport">
+
+      <!-- The infinite world surface — panned & zoomed via transform -->
+      <div id="canvasWorld">
+        <div class="empty-msg" id="emptyMsg">
+          <span class="empty-icon">🗺</span>
+          Your satchel is empty, adventurer.<br/>
+          <small>Forge an item on the left to begin.</small>
+        </div>
+        <!-- Items injected here by JS -->
+      </div>
+
+      <!-- Zoom controls overlay -->
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="zoomIn"  title="Zoom in">+</button>
+        <div class="zoom-label" id="zoomLabel">100%</div>
+        <button class="zoom-btn" id="zoomOut" title="Zoom out">−</button>
+        <button class="zoom-btn" id="zoomReset" title="Reset view" style="font-size:13px">⌂</button>
+      </div>
+
+      <!-- Context menu — shown on item click -->
+      <div class="ctx-menu" id="ctxMenu">
+        <div class="ctx-item-name" id="ctxTitle">Item</div>
+        <button class="ctx-btn" id="ctxTakeOne"><span class="ctx-icon">☝</span>Take One</button>
+        <button class="ctx-btn" id="ctxClone"><span class="ctx-icon">⎘</span>Clone Stack</button>
+        <button class="ctx-btn" id="ctxRename"><span class="ctx-icon">✎</span>Rename</button>
+        <button class="ctx-btn ctx-btn-remove" id="ctxRemove"><span class="ctx-icon">🗑</span>Remove</button>
+      </div>
+
+      <!-- Bottom control panel -->
+      <div class="item-controls" id="itemControls">
+        <div class="ctrl-name" id="ctrlName">
+          Item Name<span id="ctrlSub">selected</span>
+        </div>
+        <div class="ctrl-sep"></div>
+        <div class="ctrl-qty-group">
+          <span class="ctrl-qty-label">QTY</span>
+          <button class="ctrl-btn" id="ctrlMinus">−</button>
+          <div class="ctrl-qty-val" id="ctrlQty">1</div>
+          <button class="ctrl-btn" id="ctrlPlus">+</button>
+        </div>
+        <div class="ctrl-sep"></div>
+        <button class="ctrl-btn ctrl-btn-remove" id="ctrlRemove">🗑 Remove</button>
+      </div>
+
+    </div><!-- /canvas-viewport -->
+  </div><!-- /main -->
+
+  <!-- Toasts -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Made by Phaizona badge — bottom-left corner -->
+  <a class="phaizona-badge" href="https://github.com/phaizona" target="_blank" rel="noopener noreferrer" aria-label="Phaizona on GitHub">
+    <span class="phaizona-rune">ᚠ</span>
+    <div class="phaizona-text">
+      <span class="phaizona-by">made by</span>
+      <span class="phaizona-name">Phaizona</span>
+    </div>
+  </a>
+
+  <!-- Hidden import file input -->
+  <input type="file" id="importInput" accept=".json" style="display:none" />
+
+  <!-- ============================================================
+       JAVASCRIPT
+       ============================================================ -->
+  <script>
+    /* ============================================================
+       STATE
+       ─────────────────────────────────────────────────────────────
+       inventory[]  : array of item objects
+         {
+           id   : string  — unique id
+           name : string  — display name
+           src  : string  — base64 data URL
+           qty  : number  — stack count
+           wx   : number  — world X position in pixels
+           wy   : number  — world Y position in pixels
+         }
+
+       view         : current pan/zoom state of the canvas
+         { x, y, scale }  — world offset (px) and zoom multiplier
+
+       selectedId   : string|null — currently selected item id
+       ctxTargetId  : string|null — item id the context menu is open for
+    ============================================================ */
+    let inventory  = [];
+    let selectedId = null;
+    let ctxTargetId = null;
+
+    /* ── View / pan / zoom state ── */
+    let view = { x: 0, y: 0, scale: 1 };
+    const SCALE_MIN  = 0.25;
+    const SCALE_MAX  = 3.0;
+    const SCALE_STEP = 0.15;
+
+    /* World centre — items spawn near here initially */
+    const WORLD_W = 3000;
+    const WORLD_H = 3000;
+
+    /* ── DOM references ── */
+    const viewport     = document.getElementById('canvasViewport');
+    const world        = document.getElementById('canvasWorld');
+    const uploadZone   = document.getElementById('uploadZone');
+    const fileInput    = document.getElementById('fileInput');
+    const previewImg   = document.getElementById('previewImg');
+    const placeholder  = document.getElementById('uploadPlaceholder');
+    const itemNameEl   = document.getElementById('itemName');
+    const qtyDisplay   = document.getElementById('qtyDisplay');
+    const addBtn       = document.getElementById('addBtn');
+    const itemCount    = document.getElementById('itemCount');
+    const emptyMsg     = document.getElementById('emptyMsg');
+    const itemControls = document.getElementById('itemControls');
+    const ctrlName     = document.getElementById('ctrlName');
+    const ctrlSub      = document.getElementById('ctrlSub');
+    const ctrlQty      = document.getElementById('ctrlQty');
+    const toastCont    = document.getElementById('toastContainer');
+    const importInput  = document.getElementById('importInput');
+    const ctxMenu      = document.getElementById('ctxMenu');
+    const zoomLabel    = document.getElementById('zoomLabel');
+
+    let sidebarQty = 1;
+    let pendingImg = null;
+
+    /* ============================================================
+       UTILITIES
+       ============================================================ */
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+    function toast(msg) {
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      toastCont.appendChild(el);
+      setTimeout(() => {
+        el.classList.add('out');
+        el.addEventListener('animationend', () => el.remove(), { once: true });
+      }, 2400);
+    }
+
+    /* ============================================================
+       PERSISTENCE — localStorage
+       ============================================================ */
+    const STORAGE_KEY = 'fantasy_inventory_v2';
+
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ inventory, view })); }
+      catch (_) { toast('⚠ Storage full — export to back up!'); }
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) { inventory = data; return; }        // v1 compat
+        if (data.inventory) inventory = data.inventory;
+        if (data.view)      view      = data.view;
+      } catch (_) { inventory = []; }
+    }
+
+    /* ============================================================
+       EXPORT / IMPORT / CLEAR
+       ============================================================ */
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (!inventory.length) { toast('Nothing to export!'); return; }
+      const blob = new Blob([JSON.stringify({ inventory, view }, null, 2)], { type:'application/json' });
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'fantasy_inventory.json' });
+      a.click(); URL.revokeObjectURL(a.href);
+      toast('⬇ Exported!');
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => importInput.click());
+
+    importInput.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (Array.isArray(data))        { inventory = data; }
+          else if (data.inventory)         { inventory = data.inventory; if (data.view) view = data.view; }
+          else throw new Error();
+          save(); renderAll(); applyView();
+          toast('⬆ Inventory imported!');
+        } catch (_) { toast('✕ Invalid file.'); }
+        importInput.value = '';
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (!inventory.length) { toast('Already empty!'); return; }
+      if (!confirm('Clear your entire inventory?')) return;
+      inventory = []; selectedId = null;
+      closeCtxMenu(); hideControls(); save(); renderAll();
+      toast('✕ Inventory cleared.');
+    });
+
+    /* ============================================================
+       VIEW — Pan & Zoom
+       ============================================================ */
+
+    /* Apply the current view transform to the world div */
+    function applyView() {
+      world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+      zoomLabel.textContent = Math.round(view.scale * 100) + '%';
+    }
+
+    /* Clamp scale and optionally keep a screen-space point fixed */
+    function zoomBy(delta, screenX, screenY) {
+      const newScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, view.scale + delta));
+      if (newScale === view.scale) return;
+
+      /* We want the world point under (screenX, screenY) to stay fixed. */
+      const vpRect = viewport.getBoundingClientRect();
+      const ox = (screenX - vpRect.left);
+      const oy = (screenY - vpRect.top);
+
+      /* World point before zoom */
+      const wx = (ox - view.x) / view.scale;
+      const wy = (oy - view.y) / view.scale;
+
+      view.scale = newScale;
+
+      /* Adjust pan so that world point maps to the same screen point */
+      view.x = ox - wx * view.scale;
+      view.y = oy - wy * view.scale;
+
+      applyView();
+    }
+
+    /* Mouse-wheel zoom */
+    viewport.addEventListener('wheel', e => {
+      e.preventDefault();
+      zoomBy(e.deltaY < 0 ? SCALE_STEP : -SCALE_STEP, e.clientX, e.clientY);
+    }, { passive: false });
+
+    /* Zoom buttons */
+    document.getElementById('zoomIn').addEventListener('click',  () => { const r = viewport.getBoundingClientRect(); zoomBy( SCALE_STEP, r.left + r.width/2, r.top + r.height/2); });
+    document.getElementById('zoomOut').addEventListener('click', () => { const r = viewport.getBoundingClientRect(); zoomBy(-SCALE_STEP, r.left + r.width/2, r.top + r.height/2); });
+    document.getElementById('zoomReset').addEventListener('click', () => {
+      /* Reset to show world centre in viewport centre */
+      const vr = viewport.getBoundingClientRect();
+      view.scale = 1;
+      view.x = vr.width  / 2 - WORLD_W / 2;
+      view.y = vr.height / 2 - WORLD_H / 2;
+      applyView();
+    });
+
+    /* ── PAN — drag on the viewport background ── */
+    let isPanning = false, panStart = { x:0, y:0 }, viewStart = { x:0, y:0 };
+
+    viewport.addEventListener('pointerdown', e => {
+      /* Only pan when clicking the viewport/world background, not on items */
+      if (e.target !== viewport && e.target !== world && !e.target.classList.contains('empty-msg') && !e.target.classList.contains('empty-icon')) return;
+      closeCtxMenu();
+      deselectItem();
+      isPanning = true;
+      panStart  = { x: e.clientX, y: e.clientY };
+      viewStart = { x: view.x,    y: view.y };
+      viewport.setPointerCapture(e.pointerId);
+      viewport.style.cursor = 'grabbing';
+    });
+
+    viewport.addEventListener('pointermove', e => {
+      if (!isPanning) return;
+      view.x = viewStart.x + (e.clientX - panStart.x);
+      view.y = viewStart.y + (e.clientY - panStart.y);
+      applyView();
+    });
+
+    viewport.addEventListener('pointerup', () => {
+      isPanning = false;
+      viewport.style.cursor = '';
+      save();
+    });
+
+    /* ============================================================
+       SIDEBAR CONTROLS
+       ============================================================ */
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) readImg(e.target.files[0]); fileInput.value=''; });
+
+    uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault(); uploadZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f && f.type.startsWith('image/')) readImg(f);
+    });
+
+    function readImg(file) {
+      const r = new FileReader();
+      r.onload = ev => {
+        pendingImg = ev.target.result;
+        previewImg.src = pendingImg; previewImg.style.display='block';
+        placeholder.style.display = 'none';
+        checkReady();
+      };
+      r.readAsDataURL(file);
+    }
+
+    function checkReady() { addBtn.disabled = !(pendingImg && itemNameEl.value.trim()); }
+    itemNameEl.addEventListener('input', checkReady);
+
+    document.getElementById('qtyMinus').addEventListener('click', () => { if (sidebarQty > 1) { sidebarQty--; qtyDisplay.textContent=sidebarQty; } });
+    document.getElementById('qtyPlus').addEventListener('click',  () => { sidebarQty++; qtyDisplay.textContent=sidebarQty; });
+
+    /* ============================================================
+       ADD ITEM
+       ============================================================ */
+    addBtn.addEventListener('click', () => {
+      const name = itemNameEl.value.trim();
+      if (!name || !pendingImg) return;
+
+      /* Spawn near the visible centre of the viewport */
+      const vr     = viewport.getBoundingClientRect();
+      const centreX = (vr.width  / 2 - view.x) / view.scale;
+      const centreY = (vr.height / 2 - view.y) / view.scale;
+      const scatter = 140;
+
+      const item = {
+        id: uid(), name, src: pendingImg, qty: sidebarQty,
+        wx: centreX + (Math.random() - 0.5) * scatter,
+        wy: centreY + (Math.random() - 0.5) * scatter,
+      };
+      inventory.push(item);
+      save(); renderAll();
+
+      /* Reset sidebar */
+      itemNameEl.value = ''; pendingImg = null; sidebarQty = 1;
+      qtyDisplay.textContent = '1';
+      previewImg.style.display='none'; previewImg.src='';
+      placeholder.style.display='flex';
+      checkReady();
+      toast(`✦ "${name}" forged!`);
+    });
+
+    /* ============================================================
+       RENDER ALL ITEMS
+       ============================================================ */
+    function renderAll() {
+      world.querySelectorAll('.inv-item').forEach(el => el.remove());
+      inventory.forEach(item => world.appendChild(buildItemEl(item)));
+
+      emptyMsg.style.display = inventory.length ? 'none' : 'block';
+
+      const total = inventory.reduce((s,i) => s + i.qty, 0);
+      itemCount.textContent = inventory.length
+        ? `${inventory.length} type${inventory.length>1?'s':''} · ${total} total`
+        : 'No items in inventory';
+
+      if (selectedId) {
+        const el = world.querySelector(`[data-id="${selectedId}"]`);
+        if (el) el.classList.add('selected');
+      }
+    }
+
+    /* ============================================================
+       BUILD ITEM ELEMENT
+       ============================================================ */
+    function buildItemEl(item) {
+      const el = document.createElement('div');
+      el.className = 'inv-item';
+      el.dataset.id = item.id;
+      el.style.left = item.wx + 'px';
+      el.style.top  = item.wy + 'px';
+
+      el.innerHTML = `
+        <div class="item-frame">
+          <img src="${item.src}" alt="${item.name}" draggable="false"/>
+          <div class="item-qty">${item.qty > 1 ? item.qty : ''}</div>
+        </div>
+        <div class="item-name">${item.name}</div>
+      `;
+
+      /* ── Drag logic ── */
+      let dragging = false, hasMoved = false;
+      let mouseStart = {x:0,y:0}, itemStart = {x:0,y:0};
+
+      el.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        /* Close context menu on any item interaction */
+        closeCtxMenu();
+
+        dragging  = true;
+        hasMoved  = false;
+        el.setPointerCapture(e.pointerId);
+        mouseStart = { x: e.clientX, y: e.clientY };
+        itemStart  = { x: item.wx,   y: item.wy };
+      });
+
+      el.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        const dx = e.clientX - mouseStart.x;
+        const dy = e.clientY - mouseStart.y;
+        if (!hasMoved && Math.hypot(dx, dy) < 5) return;
+        hasMoved = true;
+        el.classList.add('dragging');
+
+        /* Convert screen-delta to world-delta (account for zoom) */
+        item.wx = itemStart.x + dx / view.scale;
+        item.wy = itemStart.y + dy / view.scale;
+        el.style.left = item.wx + 'px';
+        el.style.top  = item.wy + 'px';
+      });
+
+      el.addEventListener('pointerup', e => {
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove('dragging');
+
+        if (hasMoved) {
+          save();
+        } else {
+          /* Click — show context menu */
+          openCtxMenu(item.id, e.clientX, e.clientY);
+        }
+      });
+
+      return el;
+    }
+
+    /* ============================================================
+       CONTEXT MENU — opens near the item on click
+       ============================================================ */
+    function openCtxMenu(id, screenX, screenY) {
+      ctxTargetId = id;
+      const item  = inventory.find(i => i.id === id);
+      if (!item) return;
+
+      /* Also select the item so the bottom panel appears */
+      selectItem(id);
+
+      /* Title */
+      document.getElementById('ctxTitle').textContent = item.name;
+
+      /* Enable / disable Take One based on qty */
+      document.getElementById('ctxTakeOne').disabled = (item.qty < 2);
+      document.getElementById('ctxTakeOne').style.opacity = item.qty < 2 ? '0.4' : '1';
+
+      /* Position the menu in screen space but relative to the viewport */
+      const vr  = viewport.getBoundingClientRect();
+      const mx  = screenX - vr.left + 12;  /* 12px right of cursor */
+      const my  = screenY - vr.top  - 20;  /* slightly above cursor */
+
+      /* Clamp so it doesn't go off-screen */
+      const menuW = 148, menuH = 160;
+      const left = Math.min(mx, vr.width  - menuW - 8);
+      const top  = Math.min(my, vr.height - menuH - 90); /* 90 = bottom panel */
+
+      ctxMenu.style.left = left + 'px';
+      ctxMenu.style.top  = top  + 'px';
+      ctxMenu.classList.add('open');
+    }
+
+    function closeCtxMenu() {
+      ctxMenu.classList.remove('open');
+      ctxTargetId = null;
+    }
+
+    /* Close context menu when clicking anywhere outside it */
+    viewport.addEventListener('pointerdown', e => {
+      if (!ctxMenu.contains(e.target)) closeCtxMenu();
+    }, true);
+
+    /* ── Take One — splits 1 off the stack, places it nearby ── */
+    document.getElementById('ctxTakeOne').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === ctxTargetId);
+      if (!item || item.qty < 2) return;
+
+      item.qty--;
+
+      /* Spawn the single copy offset slightly from the original */
+      const offset = 90 + Math.random() * 40;
+      const angle  = Math.random() * Math.PI * 2;
+      const single = {
+        id: uid(), name: item.name, src: item.src, qty: 1,
+        wx: item.wx + Math.cos(angle) * offset,
+        wy: item.wy + Math.sin(angle) * offset,
+      };
+      inventory.push(single);
+      closeCtxMenu(); save(); renderAll();
+      selectItem(single.id);
+      toast(`☝ Took 1 × ${item.name}`);
+    });
+
+    /* ── Clone — duplicates the entire stack nearby ── */
+    document.getElementById('ctxClone').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === ctxTargetId);
+      if (!item) return;
+
+      const offset = 100 + Math.random() * 40;
+      const angle  = Math.random() * Math.PI * 2;
+      const clone = {
+        id: uid(), name: item.name, src: item.src, qty: item.qty,
+        wx: item.wx + Math.cos(angle) * offset,
+        wy: item.wy + Math.sin(angle) * offset,
+      };
+      inventory.push(clone);
+      closeCtxMenu(); save(); renderAll();
+      selectItem(clone.id);
+      toast(`⎘ Cloned "${item.name}"`);
+    });
+
+    /* ── Rename — swap name label for an inline text input ── */
+    document.getElementById('ctxRename').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === ctxTargetId);
+      if (!item) return;
+      closeCtxMenu();
+
+      const el      = world.querySelector(`[data-id="${item.id}"]`);
+      const nameDiv = el.querySelector('.item-name');
+
+      /* Replace label with input */
+      const input = document.createElement('input');
+      input.type  = 'text';
+      input.className = 'rename-input';
+      input.value = item.name;
+      input.maxLength = 40;
+      nameDiv.replaceWith(input);
+      input.focus(); input.select();
+
+      function commitRename() {
+        const newName = input.value.trim() || item.name;
+        item.name = newName;
+        /* Restore label */
+        const restored = document.createElement('div');
+        restored.className = 'item-name';
+        restored.textContent = newName;
+        input.replaceWith(restored);
+        save(); renderAll(); selectItem(item.id);
+        toast(`✎ Renamed to "${newName}"`);
+      }
+
+      input.addEventListener('blur',  commitRename, { once: true });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = item.name; input.blur(); }
+      });
+    });
+
+    /* ── Context Remove ── */
+    document.getElementById('ctxRemove').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === ctxTargetId);
+      if (!item) return;
+      if (!confirm(`Remove "${item.name}"?`)) return;
+      removeItem(item.id);
+      closeCtxMenu();
+    });
+
+    /* ============================================================
+       SELECTION & BOTTOM CONTROL PANEL
+       ============================================================ */
+    function selectItem(id) {
+      /* Remove old selection highlight */
+      if (selectedId) {
+        const prev = world.querySelector(`[data-id="${selectedId}"]`);
+        if (prev) prev.classList.remove('selected');
+      }
+      selectedId = id;
+      const item = inventory.find(i => i.id === id);
+      if (!item) return;
+
+      const el = world.querySelector(`[data-id="${id}"]`);
+      if (el) el.classList.add('selected');
+
+      ctrlName.childNodes[0].textContent = item.name;
+      ctrlSub.textContent = 'selected';
+      ctrlQty.textContent = item.qty;
+      itemControls.classList.add('visible');
+    }
+
+    function deselectItem() {
+      if (selectedId) {
+        const el = world.querySelector(`[data-id="${selectedId}"]`);
+        if (el) el.classList.remove('selected');
+      }
+      selectedId = null;
+      hideControls();
+    }
+
+    function hideControls() { itemControls.classList.remove('visible'); }
+
+    /* Bottom panel qty buttons */
+    document.getElementById('ctrlPlus').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === selectedId); if (!item) return;
+      item.qty++;
+      ctrlQty.textContent = item.qty;
+      const badge = world.querySelector(`[data-id="${selectedId}"] .item-qty`);
+      if (badge) badge.textContent = item.qty > 1 ? item.qty : '';
+      save(); updateCount();
+    });
+
+    document.getElementById('ctrlMinus').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === selectedId); if (!item) return;
+      if (item.qty > 1) {
+        item.qty--;
+        ctrlQty.textContent = item.qty;
+        const badge = world.querySelector(`[data-id="${selectedId}"] .item-qty`);
+        if (badge) badge.textContent = item.qty > 1 ? item.qty : '';
+        save(); updateCount();
+      } else {
+        if (confirm(`Remove "${item.name}"?`)) removeItem(item.id);
+      }
+    });
+
+    document.getElementById('ctrlRemove').addEventListener('click', () => {
+      const item = inventory.find(i => i.id === selectedId);
+      if (item && confirm(`Remove "${item.name}"?`)) removeItem(item.id);
+    });
+
+    function removeItem(id) {
+      const item = inventory.find(i => i.id === id);
+      const name = item ? item.name : 'Item';
+      inventory = inventory.filter(i => i.id !== id);
+      if (selectedId === id) { selectedId = null; hideControls(); }
+      save(); renderAll();
+      toast(`✕ "${name}" removed.`);
+    }
+
+    function updateCount() {
+      const total = inventory.reduce((s,i) => s + i.qty, 0);
+      itemCount.textContent = inventory.length
+        ? `${inventory.length} type${inventory.length>1?'s':''} · ${total} total`
+        : 'No items in inventory';
+    }
+
+    /* ============================================================
+       INIT
+       ============================================================ */
+    load();
+
+    /* Centre the view on the world on first load */
+    (function initView() {
+      /* Run after layout so viewport dimensions are known */
+      requestAnimationFrame(() => {
+        const vr = viewport.getBoundingClientRect();
+        if (view.x === 0 && view.y === 0 && view.scale === 1) {
+          /* First visit — centre the world */
+          view.x = vr.width  / 2 - WORLD_W / 2;
+          view.y = vr.height / 2 - WORLD_H / 2;
+        }
+        applyView();
+      });
+    })();
+
+    renderAll();
+  </script>
+
+</body>
+</html>
