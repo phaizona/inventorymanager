@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fantasy Inventory Manager</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎒%3C/text%3E%3C/svg%3E" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%92%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Uncial+Antiqua&display=swap" rel="stylesheet" />
@@ -17,9 +16,13 @@
   --deep-brown: #1a0d00; --leather: #6b3a1f; --leather-light: #8b5e3c;
   --folder-bg: rgba(80,45,10,0.35); --folder-border: #8b6020;
   --merge-glow: rgba(100,220,100,0.6);
+  --selection-color: rgba(100,160,255,0.35);
+  --selection-border: rgba(120,180,255,0.9);
   --font-title: 'Uncial Antiqua', serif;
   --font-heading: 'MedievalSharp', serif;
   --font-body: 'Crimson Pro', serif;
+  --r-common: #8a8a8a; --r-uncommon: #4caf50; --r-rare: #2979ff;
+  --r-epic: #aa44cc; --r-legendary: #ff9800; --r-mythic: #ff1744;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -28,32 +31,54 @@ body {
   display: flex; flex-direction: column;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 }
+
+/* ── Header ── */
 header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 20px 8px 56px;
+  display: flex; align-items: center; gap: 16px; padding: 8px 16px;
   background: linear-gradient(180deg, #0d0500 0%, #2a1200 60%, #1a0d00 100%);
-  border-bottom: 3px solid var(--gold);
-  box-shadow: 0 4px 20px rgba(200,146,42,0.3);
+  border-bottom: 3px solid var(--gold); box-shadow: 0 4px 20px rgba(200,146,42,0.3);
   flex-shrink: 0; position: relative; z-index: 10;
 }
-header::before, header::after { content: '᛭'; font-size: 20px; color: var(--gold); opacity: 0.4; position: absolute; top: 50%; transform: translateY(-50%); }
-header::before { left: 56px; } header::after { right: 10px; }
-.header-center { flex: 1; text-align: center; }
-.header-title { font-family: var(--font-title); font-size: clamp(16px, 2.2vw, 26px); color: var(--gold-light); text-shadow: 0 0 18px var(--gold), 0 2px 4px var(--deep-brown); letter-spacing: 2px; }
+header::after { content: '᛭'; font-size: 18px; color: var(--gold); opacity: 0.3; pointer-events: none; }
+.header-center { flex: 1; }
+.header-title { font-family: var(--font-title); font-size: clamp(15px, 2vw, 24px); color: var(--gold-light); text-shadow: 0 0 18px var(--gold), 0 2px 4px var(--deep-brown); letter-spacing: 2px; }
 .header-subtitle { font-family: var(--font-body); font-style: italic; font-size: 11px; color: var(--parchment-dark); opacity: 0.65; }
-.header-actions { display: flex; gap: 5px; align-items: center; }
+.header-actions { display: flex; gap: 6px; align-items: center; margin-right: 8px; }
 .btn { font-family: var(--font-heading); font-size: 11px; padding: 5px 12px; border: 1.5px solid var(--gold); background: linear-gradient(135deg,#2a1500,#3d2000); color: var(--gold-light); cursor: pointer; border-radius: 3px; letter-spacing: 0.5px; transition: all 0.18s; }
 .btn:hover { background: linear-gradient(135deg,#3d2200,#5c3500); color: var(--gold-shine); box-shadow: 0 0 10px rgba(200,146,42,0.35); }
 .btn:active { transform: scale(0.96); }
 .btn-danger { border-color: #a04030; color: #e06050; }
 .btn-danger:hover { background: linear-gradient(135deg,#3d1010,#5c1a1a); color: #ff8070; }
-.btn-folder { border-color: var(--folder-border); color: var(--parchment-dark); }
-.btn-folder:hover { border-color: var(--gold); background: linear-gradient(135deg,#2a1800,#4a2800); color: var(--gold-light); }
+
+/* ── Layout ── */
 .main { display: flex; flex: 1; overflow: hidden; position: relative; }
-.sidebar { width: 230px; flex-shrink: 0; background: linear-gradient(180deg,#1a0d00 0%,#0d0500 100%); border-right: 3px solid var(--gold); display: flex; flex-direction: column; padding: 14px 11px; gap: 12px; overflow-y: auto; box-shadow: 4px 0 20px rgba(0,0,0,0.5); position: relative; z-index: 5; }
-.sidebar-title { font-family: var(--font-heading); font-size: 12px; color: var(--gold); text-align: center; letter-spacing: 2px; text-transform: uppercase; padding-bottom: 10px; border-bottom: 1px solid var(--leather); }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 238px; flex-shrink: 0;
+  background: linear-gradient(180deg,#1a0d00 0%,#0d0500 100%);
+  border-right: 3px solid var(--gold);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  position: relative; z-index: 5;
+}
+.sidebar-tabs { display: flex; flex-shrink: 0; border-bottom: 2px solid var(--gold); }
+.sidebar-tab {
+  flex: 1; padding: 8px 4px;
+  font-family: var(--font-heading); font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-faded);
+  background: transparent; border: none; cursor: pointer;
+  transition: all 0.18s; border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+.sidebar-tab:hover { color: var(--gold-light); }
+.sidebar-tab.active { color: var(--gold-shine); border-bottom-color: var(--gold-shine); background: rgba(200,146,42,0.06); }
+.sidebar-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.sidebar-panel.active { display: flex; }
+.forge-scroll { flex: 1; overflow-y: auto; padding: 12px 11px; display: flex; flex-direction: column; gap: 11px; }
+.sidebar-title { font-family: var(--font-heading); font-size: 12px; color: var(--gold); text-align: center; letter-spacing: 2px; text-transform: uppercase; padding-bottom: 9px; border-bottom: 1px solid var(--leather); }
 .sidebar-title::before, .sidebar-title::after { content: '✦'; color: var(--gold-light); font-size: 9px; margin: 0 5px; }
-.brand-divider { text-align: center; font-family: var(--font-title); font-size: 13px; color: var(--gold); opacity: 0.55; letter-spacing: 3px; padding: 2px 0; }
+
 .upload-zone { width: 100%; aspect-ratio: 1; border: 2px dashed var(--leather-light); border-radius: 6px; background: rgba(255,255,255,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.22s; position: relative; overflow: hidden; }
 .upload-zone:hover { border-color: var(--gold); background: rgba(200,146,42,0.06); }
 .upload-zone.drag-over { border-color: var(--gold-shine); box-shadow: inset 0 0 20px rgba(200,146,42,0.2); }
@@ -61,46 +86,156 @@ header::before { left: 56px; } header::after { right: 10px; }
 #fileInput, #importInput { display: none; }
 .upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
 .upload-icon { font-size: 30px; opacity: 0.45; }
-.upload-hint { font-size: 11px; color: var(--parchment-dark); text-align: center; line-height: 1.4; font-style: italic; }
+.upload-hint-sm { font-size: 10px; color: var(--parchment-dark); text-align: center; line-height: 1.4; font-style: italic; }
+
 .field-label { font-family: var(--font-heading); font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
 .fancy-input { width: 100%; background: rgba(0,0,0,0.4); border: 1.5px solid var(--leather); border-radius: 4px; color: var(--parchment); font-family: var(--font-body); font-size: 14px; padding: 7px 9px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
 .fancy-input:focus { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,146,42,0.22); }
 .fancy-input::placeholder { color: var(--ink-faded); font-style: italic; }
 .fancy-input.error { border-color: #c04030; box-shadow: 0 0 8px rgba(192,64,48,0.4); }
-.input-warn { font-family: var(--font-body); font-style: italic; font-size: 11px; color: #e07060; margin-top: 4px; display: none; }
-.input-warn.visible { display: block; }
-.qty-row { display: flex; align-items: center; gap: 7px; }
-.qty-btn { width: 26px; height: 26px; background: rgba(200,146,42,0.14); border: 1.5px solid var(--gold); color: var(--gold-light); font-size: 17px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: center; transition: background 0.14s; line-height: 1; }
-.qty-btn:hover { background: rgba(200,146,42,0.3); }
-.qty-display { flex: 1; text-align: center; font-family: var(--font-heading); font-size: 15px; color: var(--parchment); background: rgba(0,0,0,0.3); border: 1.5px solid var(--leather); border-radius: 3px; padding: 3px 0; }
+.input-warn { font-family: var(--font-body); font-style: italic; font-size: 11px; color: #e07060; margin-top: 3px; display: none; }
+.input-warn.visible { display: flex; align-items: center; gap: 5px; }
+.input-warn-link { color: var(--gold-light); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+
+.selector-row { display: flex; align-items: center; gap: 7px; }
+.selector-btn { width: 26px; height: 26px; background: rgba(200,146,42,0.14); border: 1.5px solid var(--gold); color: var(--gold-light); font-size: 17px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; justify-content: center; transition: background 0.14s; line-height: 1; flex-shrink: 0; }
+.selector-btn:hover { background: rgba(200,146,42,0.3); }
+.selector-display { flex: 1; text-align: center; font-family: var(--font-heading); font-size: 12px; color: var(--parchment); background: rgba(0,0,0,0.3); border: 1.5px solid var(--leather); border-radius: 3px; padding: 3px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selector-display.rarity-common    { color: var(--r-common);    border-color: var(--r-common); }
+.selector-display.rarity-uncommon  { color: var(--r-uncommon);  border-color: var(--r-uncommon); }
+.selector-display.rarity-rare      { color: var(--r-rare);      border-color: var(--r-rare); }
+.selector-display.rarity-epic      { color: var(--r-epic);      border-color: var(--r-epic); }
+.selector-display.rarity-legendary { color: var(--r-legendary); border-color: var(--r-legendary); }
+.selector-display.rarity-mythic    { color: var(--r-mythic);    border-color: var(--r-mythic); box-shadow: 0 0 6px var(--r-mythic); }
+
+.weight-input, .gold-input {
+  width: 100%; background: rgba(0,0,0,0.4); border: 1.5px solid var(--leather);
+  border-radius: 4px; color: var(--parchment); font-family: var(--font-heading);
+  font-size: 13px; padding: 5px 9px; outline: none; transition: border-color 0.2s;
+}
+.weight-input:focus, .gold-input:focus { border-color: var(--gold); }
+
+/* Two-column stat inputs */
+.stat-row { display: flex; gap: 8px; }
+.stat-row > div { flex: 1; }
+
 .btn-add { width: 100%; padding: 9px; font-family: var(--font-heading); font-size: 12px; letter-spacing: 1.5px; background: linear-gradient(135deg,#3d2200,#6b3a00); border: 2px solid var(--gold); color: var(--gold-shine); cursor: pointer; border-radius: 4px; transition: all 0.2s; }
 .btn-add::before { content: '⚔'; margin-right: 7px; }
 .btn-add:hover { background: linear-gradient(135deg,#5c3500,#8b5200); box-shadow: 0 0 16px rgba(200,146,42,0.4); transform: translateY(-1px); }
 .btn-add:active { transform: translateY(0); }
 .btn-add:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-.btn-make-folder { width: 100%; padding: 8px; font-family: var(--font-heading); font-size: 11px; letter-spacing: 1px; background: linear-gradient(135deg,#1a1000,#2e1e00); border: 1.5px solid var(--folder-border); color: var(--parchment-dark); cursor: pointer; border-radius: 4px; transition: all 0.2s; }
-.btn-make-folder::before { content: '📁'; margin-right: 6px; }
-.btn-make-folder:hover { background: linear-gradient(135deg,#2a1a00,#4a2e00); border-color: var(--gold); color: var(--gold-light); }
-.sidebar-footer { margin-top: auto; text-align: center; font-size: 10px; color: var(--ink-faded); font-style: italic; padding-top: 8px; border-top: 1px solid var(--leather); }
-.canvas-viewport { flex: 1; position: relative; overflow: hidden; cursor: default; background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%), repeating-linear-gradient(92deg, transparent 0, transparent 80px, rgba(0,0,0,0.035) 80px, rgba(0,0,0,0.035) 81px), repeating-linear-gradient(2deg, transparent 0, transparent 60px, rgba(0,0,0,0.025) 60px, rgba(0,0,0,0.025) 61px), linear-gradient(160deg,#3d2510 0%,#2a1500 50%,#1a0d00 100%); }
+
+.sidebar-footer-text { flex-shrink: 0; text-align: center; font-size: 10px; color: var(--ink-faded); font-style: italic; padding: 8px 11px; border-top: 1px solid var(--leather); }
+.phaizona-link { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-top: 1px solid var(--leather); text-decoration: none; color: var(--parchment-dark); transition: background 0.18s, color 0.18s; flex-shrink: 0; }
+.phaizona-link:hover { background: rgba(200,146,42,0.07); color: var(--gold-light); }
+.phaizona-link:hover .phaizona-rune { opacity: 1; color: var(--gold-shine); }
+.phaizona-rune { font-size: 17px; color: var(--gold); opacity: 0.6; line-height: 1; transition: all 0.18s; }
+.phaizona-text { display: flex; flex-direction: column; line-height: 1.25; }
+.phaizona-by   { font-family: var(--font-body); font-style: italic; font-size: 9px; color: var(--ink-faded); }
+.phaizona-name { font-family: var(--font-title); font-size: 13px; color: var(--gold-light); letter-spacing: 1px; }
+
+/* ── Library panel ── */
+.lib-panel { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.lib-search-wrap { padding: 10px 11px 8px; flex-shrink: 0; position: relative; }
+.lib-search { width: 100%; background: rgba(0,0,0,0.45); border: 1.5px solid var(--leather); border-radius: 4px; color: var(--parchment); font-family: var(--font-body); font-size: 13px; padding: 6px 30px 6px 9px; outline: none; transition: border-color 0.2s; }
+.lib-search:focus { border-color: var(--gold); }
+.lib-search::placeholder { color: var(--ink-faded); font-style: italic; }
+.lib-search-clear { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--parchment-dark); cursor: pointer; font-size: 14px; opacity: 0.5; padding: 2px; transition: opacity 0.15s; }
+.lib-search-clear:hover { opacity: 1; }
+.lib-search-clear.hidden { display: none; }
+.lib-grid { flex: 1; overflow-y: auto; padding: 4px 8px 8px; display: flex; flex-wrap: wrap; gap: 7px; align-content: flex-start; }
+.lib-card {
+  width: 62px; display: flex; flex-direction: column; align-items: center;
+  gap: 4px; cursor: grab; position: relative;
+  border-radius: 4px; padding: 3px; transition: background 0.15s;
+}
+.lib-card:hover { background: rgba(200,146,42,0.1); }
+.lib-card:active { cursor: grabbing; }
+.lib-card-frame {
+  width: 54px; height: 54px; border: 2px solid var(--leather);
+  border-radius: 5px; background: rgba(0,0,0,0.5);
+  overflow: hidden; position: relative; flex-shrink: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.lib-card:hover .lib-card-frame { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,146,42,0.3); }
+.lib-card-frame img { width: 100%; height: 100%; object-fit: contain; padding: 3px; image-rendering: crisp-edges; }
+.lib-card-name { font-family: var(--font-body); font-size: 9px; color: var(--parchment-dark); text-align: center; width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.lib-card-remove {
+  position: absolute; top: 1px; right: 1px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(160,48,30,0.7); border: none;
+  color: #ffaaaa; font-size: 10px; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  transition: background 0.14s; line-height: 1; z-index: 5;
+}
+.lib-card:hover .lib-card-remove { display: flex; }
+.lib-card-remove:hover { background: rgba(200,60,40,0.9); color: #fff; }
+.lib-card-rarity { position: absolute; bottom: 2px; left: 3px; width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 4px currentColor; pointer-events: none; }
+.lib-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--leather-light); font-style: italic; font-size: 12px; opacity: 0.5; gap: 8px; text-align: center; padding: 20px; }
+.lib-empty-icon { font-size: 32px; }
+.lib-footer { flex-shrink: 0; padding: 6px 11px; border-top: 1px solid var(--leather); font-size: 10px; color: var(--ink-faded); font-style: italic; text-align: center; }
+
+/* ── Canvas ── */
+.canvas-viewport {
+  flex: 1; position: relative; overflow: hidden; cursor: default;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%),
+    repeating-linear-gradient(92deg, transparent 0, transparent 80px, rgba(0,0,0,0.035) 80px, rgba(0,0,0,0.035) 81px),
+    repeating-linear-gradient(2deg, transparent 0, transparent 60px, rgba(0,0,0,0.025) 60px, rgba(0,0,0,0.025) 61px),
+    linear-gradient(160deg,#3d2510 0%,#2a1500 50%,#1a0d00 100%);
+}
 #canvasWorld { position: absolute; top: 0; left: 0; width: 3000px; height: 3000px; transform-origin: 0 0; will-change: transform; }
 #canvasWorld::before { content: ''; position: absolute; top: 1500px; left: 1500px; transform: translate(-50%,-50%); width: 600px; height: 600px; border-radius: 50%; border: 1px solid rgba(200,146,42,0.05); box-shadow: 0 0 0 50px rgba(200,146,42,0.025), 0 0 0 120px rgba(200,146,42,0.018), 0 0 0 200px rgba(200,146,42,0.012), 0 0 0 350px rgba(200,146,42,0.006); pointer-events: none; }
-
-/* ── SVG Rope Layer ── */
 #ropeLayer { position: absolute; top: 0; left: 0; width: 3000px; height: 3000px; pointer-events: none; overflow: visible; z-index: 1; }
 .rope-path { fill: none; stroke-linecap: round; stroke-linejoin: round; cursor: pointer; pointer-events: stroke; }
 .rope-path:hover { filter: drop-shadow(0 0 4px rgba(232,184,75,0.8)); }
 .rope-preview-path { fill: none; stroke: #c8922a; stroke-width: 2; stroke-dasharray: 8 5; stroke-linecap: round; pointer-events: none; opacity: 0.7; }
-
 .empty-msg { position: absolute; top: 1500px; left: 1500px; transform: translate(-50%,-50%); text-align: center; color: var(--leather-light); font-style: italic; opacity: 0.38; pointer-events: none; line-height: 2; font-size: 15px; }
 .empty-msg .empty-icon { font-size: 46px; display: block; margin-bottom: 8px; }
+
+/* ── Lasso selection rect ── */
+#lassoRect {
+  position: absolute; pointer-events: none; z-index: 500;
+  background: var(--selection-color);
+  border: 1.5px solid var(--selection-border);
+  border-radius: 2px;
+  display: none;
+}
+
+/* ── Zoom controls ── */
 .zoom-controls { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 4px; z-index: 15; }
 .zoom-btn { width: 30px; height: 30px; background: rgba(26,13,0,0.82); border: 1.5px solid var(--leather); color: var(--gold-light); font-size: 18px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-family: monospace; }
 .zoom-btn:hover { border-color: var(--gold); background: rgba(200,146,42,0.18); }
 .zoom-label { text-align: center; font-family: var(--font-heading); font-size: 10px; color: var(--parchment-dark); opacity: 0.6; }
+.zoom-folder-sep { height: 1px; background: var(--leather); opacity: 0.4; margin: 2px 0; }
+.zoom-btn.folder-btn { font-size: 15px; border-color: var(--folder-border); color: var(--parchment-dark); }
+.zoom-btn.folder-btn:hover { border-color: var(--gold); color: var(--gold-light); }
+
+/* ── Multi-select toolbar (top of canvas, shown when selection active) ── */
+.multiselect-bar {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 30; display: none; align-items: center; gap: 10px;
+  background: linear-gradient(135deg,#0a1e32,#14324e);
+  border: 1.5px solid #5599cc; border-radius: 6px;
+  padding: 7px 16px; font-family: var(--font-heading); font-size: 11px;
+  color: #99ccee; letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 12px rgba(85,153,204,0.2);
+  white-space: nowrap;
+}
+.multiselect-bar.visible { display: flex; }
+.multiselect-count { font-family: var(--font-title); font-size: 14px; color: var(--gold-light); margin-right: 4px; }
+.ms-btn {
+  background: rgba(200,146,42,0.15); border: 1px solid var(--gold);
+  color: var(--gold-light); font-family: var(--font-heading); font-size: 10px;
+  padding: 3px 10px; border-radius: 3px; cursor: pointer; transition: all 0.15s;
+}
+.ms-btn:hover { background: rgba(200,146,42,0.3); color: var(--gold-shine); }
+.ms-btn-danger { background: rgba(160,48,30,0.2); border-color: #aa4030; color: #ee8070; }
+.ms-btn-danger:hover { background: rgba(200,60,40,0.4); color: #ffaa99; }
+.ms-btn-cancel { background: rgba(80,80,80,0.2); border-color: #666; color: var(--parchment-dark); }
+.ms-btn-cancel:hover { background: rgba(100,100,100,0.35); color: var(--parchment); }
 
 /* ── Connect Banner ── */
-.connect-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30; display: none; align-items: center; gap: 10px; background: linear-gradient(135deg,#0a1e32,#14324e); border: 1.5px solid #5599cc; border-radius: 6px; padding: 7px 16px; font-family: var(--font-heading); font-size: 11px; color: #99ccee; letter-spacing: 0.5px; box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 12px rgba(85,153,204,0.2); white-space: nowrap; }
+.connect-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30; display: none; align-items: center; gap: 10px; background: linear-gradient(135deg,#0a1e32,#14324e); border: 1.5px solid #5599cc; border-radius: 6px; padding: 7px 16px; font-family: var(--font-heading); font-size: 11px; color: #99ccee; letter-spacing: 0.5px; box-shadow: 0 4px 16px rgba(0,0,0,0.6); white-space: nowrap; }
 .connect-banner.visible { display: flex; }
 .connect-banner-cancel { background: rgba(200,80,60,0.2); border: 1px solid #aa4030; color: #ee8070; font-family: var(--font-heading); font-size: 10px; padding: 3px 10px; border-radius: 3px; cursor: pointer; transition: all 0.15s; }
 .connect-banner-cancel:hover { background: rgba(200,80,60,0.4); color: #ffaa99; }
@@ -125,26 +260,34 @@ header::before { left: 56px; } header::after { right: 10px; }
 .folder-resize::after { content: ''; position: absolute; bottom: 3px; right: 3px; width: 8px; height: 8px; border-right: 2px solid var(--gold); border-bottom: 2px solid var(--gold); border-radius: 0 0 2px 0; }
 .folder-resize:hover { opacity: 0.9; }
 
-/* ── Inventory Item ── */
+/* ── Item ── */
 .inv-item { position: absolute; width: 80px; display: flex; flex-direction: column; align-items: center; cursor: grab; user-select: none; z-index: 2; transition: filter 0.14s; }
 .inv-item:hover { z-index: 20; filter: drop-shadow(0 4px 10px rgba(200,146,42,0.25)); }
 .inv-item.dragging { cursor: grabbing; z-index: 1000; filter: drop-shadow(0 10px 24px rgba(200,146,42,0.55)); }
 .inv-item.selected { z-index: 10; }
+.inv-item.multi-selected { z-index: 8; }
 .inv-item.merge-target { filter: drop-shadow(0 0 14px var(--merge-glow)) drop-shadow(0 0 6px rgba(80,220,80,0.9)); }
 .inv-item.connecting-source { z-index: 15; filter: drop-shadow(0 0 14px rgba(85,153,255,0.9)); }
 .inv-item.connect-hover { filter: drop-shadow(0 0 14px rgba(100,220,100,0.9)); cursor: crosshair; }
+
 .item-frame { width: 72px; height: 72px; border: 2px solid var(--leather); border-radius: 6px; background: rgba(0,0,0,0.45); overflow: hidden; position: relative; transition: border-color 0.18s, box-shadow 0.18s; }
 .inv-item:hover .item-frame { border-color: var(--gold); box-shadow: 0 0 10px rgba(200,146,42,0.28); }
 .inv-item.selected .item-frame { border-color: var(--gold-shine); box-shadow: 0 0 0 2px var(--gold-shine), 0 0 22px rgba(232,184,75,0.5); }
+.inv-item.multi-selected .item-frame { border-color: var(--selection-border); box-shadow: 0 0 0 2px var(--selection-border), 0 0 14px rgba(120,180,255,0.4); }
 .inv-item.merge-target .item-frame { border-color: #60dd60; }
-.item-frame img { width: 100%; height: 100%; object-fit: contain; padding: 4px; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+.item-frame.has-rarity { border-color: var(--rarity-color); box-shadow: 0 0 6px var(--rarity-color); }
+.inv-item:hover .item-frame.has-rarity { border-color: var(--gold); box-shadow: 0 0 10px rgba(200,146,42,0.3); }
+.inv-item.selected .item-frame.has-rarity { border-color: var(--gold-shine); box-shadow: 0 0 0 2px var(--gold-shine), 0 0 22px rgba(232,184,75,0.5); }
+.inv-item.multi-selected .item-frame.has-rarity { border-color: var(--selection-border); box-shadow: 0 0 0 2px var(--selection-border), 0 0 14px rgba(120,180,255,0.4); }
+.item-frame img { width: 100%; height: 100%; object-fit: contain; padding: 4px; image-rendering: crisp-edges; }
 .item-qty { position: absolute; bottom: 2px; right: 4px; font-family: var(--font-heading); font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; pointer-events: none; line-height: 1; }
 .item-name { font-family: var(--font-body); font-size: 10px; color: var(--parchment-dark); text-align: center; margin-top: 4px; line-height: 1.2; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px var(--deep-brown); pointer-events: none; }
 .inv-item.selected .item-name { color: var(--gold-shine); }
+.inv-item.multi-selected .item-name { color: #aaddff; }
 @keyframes mergeFlash { 0% { transform: scale(1); filter: drop-shadow(0 0 16px rgba(80,255,80,0.9)); } 50% { transform: scale(1.25); filter: drop-shadow(0 0 32px rgba(80,255,80,1)); } 100% { transform: scale(1); filter: none; } }
 .merge-flash { animation: mergeFlash 0.4s ease; }
 
-/* ── Context Menu ── */
+/* ── Context menu ── */
 .ctx-menu { position: absolute; z-index: 200; display: none; flex-direction: column; gap: 3px; background: linear-gradient(160deg,#1a0900,#2e1500); border: 1.5px solid var(--gold); border-radius: 6px; padding: 6px; box-shadow: 0 6px 24px rgba(0,0,0,0.7), 0 0 12px rgba(200,146,42,0.18); min-width: 148px; animation: ctxIn 0.15s ease forwards; }
 @keyframes ctxIn { from { opacity:0; transform:scale(0.88); } to { opacity:1; transform:scale(1); } }
 .ctx-menu.open { display: flex; }
@@ -160,11 +303,13 @@ header::before { left: 56px; } header::after { right: 10px; }
 .ctx-btn-connect { border-color: #336699; color: #88bbdd; }
 .ctx-btn-connect:hover { background: rgba(51,102,153,0.25); color: #aaddff; border-color: #5599cc; }
 .rename-input { font-family: var(--font-body); font-size: 11px; background: rgba(0,0,0,0.7); border: 1.5px solid var(--gold); border-radius: 3px; color: var(--parchment); padding: 3px 6px; outline: none; width: 78px; text-align: center; margin-top: 3px; }
-.item-controls { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(0deg,#0d0500 0%,rgba(20,8,0,0.97) 80%,transparent 100%); border-top: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; gap: 14px; padding: 0 22px; transform: translateY(100%); transition: transform 0.28s cubic-bezier(0.22,1,0.36,1); z-index: 20; pointer-events: none; }
+
+/* ── Bottom item controls ── */
+.item-controls { position: absolute; bottom: 0; left: 0; right: 0; min-height: 80px; background: linear-gradient(0deg,#0d0500 0%,rgba(20,8,0,0.97) 80%,transparent 100%); border-top: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; gap: 14px; padding: 0 22px; transform: translateY(100%); transition: transform 0.28s cubic-bezier(0.22,1,0.36,1); z-index: 20; pointer-events: none; flex-wrap: wrap; }
 .item-controls.visible { transform: translateY(0); pointer-events: all; }
 .ctrl-name { font-family: var(--font-heading); font-size: 15px; color: var(--gold-light); min-width: 100px; text-align: center; }
 .ctrl-name span { font-family: var(--font-body); font-size: 11px; color: var(--parchment-dark); display: block; font-style: italic; }
-.ctrl-sep { width: 1px; height: 44px; background: var(--leather); opacity: 0.5; }
+.ctrl-sep { width: 1px; height: 44px; background: var(--leather); opacity: 0.5; flex-shrink: 0; }
 .ctrl-qty-group { display: flex; align-items: center; gap: 9px; }
 .ctrl-qty-label { font-family: var(--font-heading); font-size: 10px; color: var(--gold); letter-spacing: 1px; }
 .ctrl-qty-val { font-family: var(--font-heading); font-size: 21px; color: var(--parchment); min-width: 40px; text-align: center; }
@@ -174,18 +319,21 @@ header::before { left: 56px; } header::after { right: 10px; }
 .ctrl-btn-remove:hover { background: rgba(160,64,48,0.28); color: #ff8070; }
 .ctrl-btn-eject { border-color: var(--folder-border); color: var(--parchment-dark); font-size: 14px; background: rgba(139,96,32,0.1); }
 .ctrl-btn-eject:hover { background: rgba(139,96,32,0.28); color: var(--gold-light); border-color: var(--gold); }
+
+/* ── Item stats in bottom bar ── */
+.ctrl-stats { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.ctrl-stat-row { display: flex; align-items: center; gap: 5px; font-family: var(--font-heading); font-size: 11px; color: var(--parchment-dark); white-space: nowrap; }
+.ctrl-stat-icon { font-size: 13px; }
+.ctrl-stat-val { color: var(--parchment); }
+
+/* ── Toasts ── */
 .toast-container { position: fixed; top: 75px; right: 14px; display: flex; flex-direction: column; gap: 7px; z-index: 999; pointer-events: none; }
 .toast { background: linear-gradient(135deg,#2a1500,#3d2000); border: 1px solid var(--gold); color: var(--parchment); font-family: var(--font-body); font-size: 13px; padding: 7px 15px; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); animation: toastIn 0.25s ease forwards; font-style: italic; }
 .toast.warn { border-color: #c05020; background: linear-gradient(135deg,#3d1000,#5c2000); }
 .toast.out { animation: toastOut 0.25s ease forwards; }
 @keyframes toastIn { from { opacity:0; transform:translateX(36px); } to { opacity:1; transform:translateX(0); } }
 @keyframes toastOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(36px); } }
-.phaizona-badge { position: fixed; bottom: 14px; right: 14px; z-index: 50; display: flex; align-items: center; gap: 7px; background: linear-gradient(135deg,rgba(10,4,0,0.92),rgba(26,13,0,0.88)); border: 1px solid var(--leather); border-radius: 5px; padding: 5px 10px 5px 8px; text-decoration: none; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
-.phaizona-badge:hover { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,146,42,0.25); }
-.phaizona-rune { font-size: 16px; color: var(--gold); opacity: 0.75; line-height: 1; }
-.phaizona-text { display: flex; flex-direction: column; line-height: 1.2; }
-.phaizona-by { font-family: var(--font-body); font-style: italic; font-size: 9px; color: var(--parchment-dark); opacity: 0.55; }
-.phaizona-name { font-family: var(--font-title); font-size: 13px; color: var(--gold-light); letter-spacing: 1px; }
+
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: var(--deep-brown); }
 ::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 3px; }
@@ -193,155 +341,228 @@ header::before { left: 56px; } header::after { right: 10px; }
   </style>
 </head>
 <body>
-  <header>
-    <div style="width:160px"></div>
-    <div class="header-center">
-      <p class="header-title">⚔ The Adventurer's Satchel ⚔</p>
-      <p class="header-subtitle">Scroll to zoom · Drag background to pan · Click item for actions · Same-name items merge on drop · Connect links items with rope</p>
+
+<header>
+  <div class="header-center">
+    <p class="header-title">⚔ The Adventurer's Satchel ⚔</p>
+    <p class="header-subtitle">Scroll to zoom · Drag to pan · Ctrl+click or drag-select for multi-select · Same-name items merge</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn" id="exportBtn">⬇ Export</button>
+    <button class="btn" id="importBtn">⬆ Import</button>
+    <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
+  </div>
+</header>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" data-tab="forge">⚒ Forge</button>
+      <button class="sidebar-tab"        data-tab="library">📚 Library</button>
     </div>
-    <div class="header-actions">
-      <button class="btn" id="exportBtn">⬇ Export</button>
-      <button class="btn" id="importBtn">⬆ Import</button>
-      <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
+
+    <!-- FORGE PANEL -->
+    <div class="sidebar-panel active" id="forgePanel">
+      <div class="forge-scroll">
+        <div class="sidebar-title">Item Forge</div>
+
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-placeholder" id="uploadPlaceholder">
+            <span class="upload-icon">🎒</span>
+            <span class="upload-hint-sm">Drop image here<br/>or click to browse</span>
+          </div>
+          <img id="previewImg" src="" alt="" style="display:none" />
+        </div>
+        <input type="file" id="fileInput" accept="image/*" />
+
+        <div>
+          <p class="field-label">Item Name</p>
+          <input class="fancy-input" type="text" id="itemName" placeholder="e.g. Dragon Scale…" maxlength="40" />
+          <div class="input-warn" id="nameWarn">
+            ⚠ Already in library —
+            <span class="input-warn-link" id="nameWarnLink">go to Library</span>
+          </div>
+        </div>
+
+        <div>
+          <p class="field-label">Quantity</p>
+          <div class="selector-row">
+            <button class="selector-btn" id="qtyMinus">−</button>
+            <div class="selector-display" id="qtyDisplay">1</div>
+            <button class="selector-btn" id="qtyPlus">+</button>
+          </div>
+        </div>
+
+        <div>
+          <p class="field-label">Rarity</p>
+          <div class="selector-row">
+            <button class="selector-btn" id="rarityPrev">‹</button>
+            <div class="selector-display rarity-common" id="rarityDisplay">Common</div>
+            <button class="selector-btn" id="rarityNext">›</button>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div>
+            <p class="field-label">Weight <span style="opacity:.5;font-size:9px">(kg)</span></p>
+            <input class="weight-input" type="number" id="weightInput" value="0.0" min="0" step="0.1" placeholder="0.0" />
+          </div>
+          <div>
+            <p class="field-label">Gold <span style="opacity:.5;font-size:9px">(gp)</span></p>
+            <input class="gold-input" type="number" id="goldInput" value="0" min="0" step="1" placeholder="0" />
+          </div>
+        </div>
+
+        <button class="btn-add" id="addBtn" disabled>Add to Inventory</button>
+        <p class="upload-hint-sm" style="text-align:center;opacity:.55">Items are saved to your Library.<br/>Drag library cards onto the canvas.</p>
+      </div>
+      <div class="sidebar-footer-text" id="itemCount">No items in inventory</div>
+      <a class="phaizona-link" href="https://github.com/phaizona" target="_blank" rel="noopener noreferrer">
+        <span class="phaizona-rune">ᚠ</span>
+        <div class="phaizona-text">
+          <span class="phaizona-by">made by</span>
+          <span class="phaizona-name">Phaizona</span>
+        </div>
+      </a>
     </div>
-  </header>
 
-  <div class="main">
-    <aside class="sidebar">
-      <div class="sidebar-title">Item Forge</div>
-      <div class="upload-zone" id="uploadZone">
-        <div class="upload-placeholder" id="uploadPlaceholder">
-          <span class="upload-icon">🎒</span>
-          <span class="upload-hint">Drop image here<br/>or click to browse</span>
+    <!-- LIBRARY PANEL -->
+    <div class="sidebar-panel" id="libraryPanel">
+      <div class="lib-panel">
+        <div class="lib-search-wrap">
+          <input class="lib-search" type="text" id="libSearch" placeholder="Search library…" />
+          <button class="lib-search-clear hidden" id="libSearchClear">✕</button>
         </div>
-        <img id="previewImg" src="" alt="" style="display:none" />
-      </div>
-      <p class="upload-hint">- Upload an image to create a new item. <br/>- Name your item and set its quantity.</p>
-      <input type="file" id="fileInput" accept="image/*" />
-      <div>
-        <p class="field-label">Item Name</p>
-        <input class="fancy-input" type="text" id="itemName" placeholder="e.g. Dragon Scale…" maxlength="40" />
-        <div class="input-warn" id="nameWarn">⚠ An item with this name already exists!</div>
-      </div>
-      <div>
-        <p class="field-label">Quantity</p>
-        <div class="qty-row">
-          <button class="qty-btn" id="qtyMinus">−</button>
-          <div class="qty-display" id="qtyDisplay">1</div>
-          <button class="qty-btn" id="qtyPlus">+</button>
+        <div class="lib-grid" id="libGrid"></div>
+        <div class="lib-empty" id="libEmpty" style="display:none">
+          <span class="lib-empty-icon">📭</span>
+          No items in library yet.<br/>Forge some items first!
         </div>
+        <div class="lib-footer" id="libFooter">Library is empty</div>
       </div>
-      <div class="brand-divider">Phaizona</div>
-      <button class="btn-add" id="addBtn" disabled>Add to Inventory</button>
-      <button class="btn-make-folder" id="sidebarFolderBtn">Create New Folder</button>
-      <p class="upload-hint">Folders organize items. Drag items in/out.<br/>Use Connect to link items with rope.</p>
-      <div class="sidebar-footer" id="itemCount">No items in inventory</div>
-    </aside>
+    </div>
+  </aside>
 
-    <div class="canvas-viewport" id="canvasViewport">
-      <div id="canvasWorld">
-        <!-- SVG rope layer sits BELOW items in DOM order -->
-        <svg id="ropeLayer" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:3000px;height:3000px;overflow:visible;pointer-events:none;z-index:1;"></svg>
-        <div class="empty-msg" id="emptyMsg">
-          <span class="empty-icon">🗺</span>
-          Your satchel is empty, adventurer.<br/>
-          <small>Forge an item on the left to begin.</small>
-        </div>
+  <div class="canvas-viewport" id="canvasViewport">
+    <div id="canvasWorld">
+      <svg id="ropeLayer" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:3000px;height:3000px;overflow:visible;pointer-events:none;z-index:1;"></svg>
+      <div class="empty-msg" id="emptyMsg">
+        <span class="empty-icon">🗺</span>
+        Your satchel is empty, adventurer.<br/>
+        <small>Forge an item on the left to begin.</small>
       </div>
+    </div>
 
-      <div class="zoom-controls">
-        <button class="zoom-btn" id="zoomIn" title="Zoom in">+</button>
-        <div class="zoom-label" id="zoomLabel">100%</div>
-        <button class="zoom-btn" id="zoomOut" title="Zoom out">−</button>
-        <button class="zoom-btn" id="zoomReset" title="Reset view" style="font-size:13px">⌂</button>
-      </div>
+    <!-- Lasso selection rectangle -->
+    <div id="lassoRect"></div>
 
-      <div class="connect-banner" id="connectBanner">
-        🔗 Click another item to connect with rope
-        <button class="connect-banner-cancel" id="cancelConnectBtn">✕ Cancel</button>
-      </div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoomIn"    title="Zoom in">+</button>
+      <div class="zoom-label" id="zoomLabel">100%</div>
+      <button class="zoom-btn" id="zoomOut"   title="Zoom out">−</button>
+      <button class="zoom-btn" id="zoomReset" title="Reset view" style="font-size:13px">⌂</button>
+      <div class="zoom-folder-sep"></div>
+      <button class="zoom-btn folder-btn" id="canvasFolderBtn" title="Create new folder">📁</button>
+    </div>
 
-      <div class="ctx-menu" id="ctxMenu">
-        <div class="ctx-item-name" id="ctxTitle">Item</div>
-        <button class="ctx-btn" id="ctxTakeOne"><span class="ctx-icon">☝</span>Take One</button>
-        <button class="ctx-btn" id="ctxClone"><span class="ctx-icon">⎘</span>Clone Stack</button>
-        <button class="ctx-btn" id="ctxRename"><span class="ctx-icon">✎</span>Rename</button>
-        <button class="ctx-btn ctx-btn-connect" id="ctxConnect"><span class="ctx-icon">🔗</span>Connect</button>
-        <button class="ctx-btn ctx-btn-folder-sep" id="ctxEjectFolder" style="display:none"><span class="ctx-icon">📤</span>Remove from Folder</button>
-        <button class="ctx-btn ctx-btn-remove" id="ctxRemove"><span class="ctx-icon">🗑</span>Remove</button>
-      </div>
+    <!-- Multi-select toolbar -->
+    <div class="multiselect-bar" id="multiselectBar">
+      <span class="multiselect-count" id="msCount">0</span>
+      <span>selected</span>
+      <button class="ms-btn" id="msMoveHint" style="cursor:default;opacity:0.7;">Drag to move</button>
+      <button class="ms-btn ms-btn-danger" id="msDeleteBtn">🗑 Delete all</button>
+      <button class="ms-btn ms-btn-cancel" id="msCancelBtn">✕ Deselect</button>
+    </div>
 
-      <div class="item-controls" id="itemControls">
-        <div class="ctrl-name" id="ctrlName">
-          Item Name<span id="ctrlSub">selected</span>
-        </div>
-        <div class="ctrl-sep"></div>
-        <div class="ctrl-qty-group">
-          <span class="ctrl-qty-label">QTY</span>
-          <button class="ctrl-btn" id="ctrlMinus">−</button>
-          <div class="ctrl-qty-val" id="ctrlQty">1</div>
-          <button class="ctrl-btn" id="ctrlPlus">+</button>
-        </div>
-        <div class="ctrl-sep"></div>
-        <button class="ctrl-btn ctrl-btn-eject" id="ctrlEject" title="Remove from folder" style="display:none">📤</button>
-        <button class="ctrl-btn ctrl-btn-remove" id="ctrlRemove">🗑 Remove</button>
+    <!-- Connect banner -->
+    <div class="connect-banner" id="connectBanner">
+      🔗 Click another item to connect with rope
+      <button class="connect-banner-cancel" id="cancelConnectBtn">✕ Cancel</button>
+    </div>
+
+    <div class="ctx-menu" id="ctxMenu">
+      <div class="ctx-item-name" id="ctxTitle">Item</div>
+      <button class="ctx-btn" id="ctxTakeOne"><span class="ctx-icon">☝</span>Take One</button>
+      <button class="ctx-btn" id="ctxClone"><span class="ctx-icon">⎘</span>Clone Stack</button>
+      <button class="ctx-btn" id="ctxRename"><span class="ctx-icon">✎</span>Rename</button>
+      <button class="ctx-btn ctx-btn-connect" id="ctxConnect"><span class="ctx-icon">🔗</span>Connect</button>
+      <button class="ctx-btn ctx-btn-folder-sep" id="ctxEjectFolder" style="display:none"><span class="ctx-icon">📤</span>Remove from Folder</button>
+      <button class="ctx-btn ctx-btn-remove" id="ctxRemove"><span class="ctx-icon">🗑</span>Remove</button>
+    </div>
+
+    <div class="item-controls" id="itemControls">
+      <div class="ctrl-name" id="ctrlName">Item Name<span id="ctrlSub">selected</span></div>
+      <div class="ctrl-sep"></div>
+      <div class="ctrl-qty-group">
+        <span class="ctrl-qty-label">QTY</span>
+        <button class="ctrl-btn" id="ctrlMinus">−</button>
+        <div class="ctrl-qty-val" id="ctrlQty">1</div>
+        <button class="ctrl-btn" id="ctrlPlus">+</button>
       </div>
+      <div class="ctrl-sep"></div>
+      <div class="ctrl-stats">
+        <div class="ctrl-stat-row"><span class="ctrl-stat-icon">⚖</span><span class="ctrl-stat-val" id="ctrlWeight">0 kg</span></div>
+        <div class="ctrl-stat-row"><span class="ctrl-stat-icon">🪙</span><span class="ctrl-stat-val" id="ctrlGold">0 gp</span></div>
+      </div>
+      <div class="ctrl-sep"></div>
+      <button class="ctrl-btn ctrl-btn-eject" id="ctrlEject" title="Remove from folder" style="display:none">📤</button>
+      <button class="ctrl-btn ctrl-btn-remove" id="ctrlRemove">🗑 Remove</button>
     </div>
   </div>
+</div>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <a class="phaizona-badge" href="https://github.com/phaizona" target="_blank" rel="noopener noreferrer">
-    <span class="phaizona-rune">ᚠ</span>
-    <div class="phaizona-text">
-      <span class="phaizona-by">made by</span>
-      <span class="phaizona-name">Phaizona</span>
-    </div>
-  </a>
-  <input type="file" id="importInput" accept=".json" style="display:none" />
+<div class="toast-container" id="toastContainer"></div>
+<input type="file" id="importInput" accept=".json" style="display:none" />
 
 <script>
 /* ================================================================
-   FANTASY INVENTORY MANAGER
-
-   COORDINATE SYSTEM
-   • Free items:    item.wx / item.wy = world-space px (in #canvasWorld)
-   • Foldered items: item.wx / item.wy = folder-body-relative px
-   FOLDER_HEADER_H must stay in sync with .folder-header min-height.
-
-   ROPE SYSTEM
-   • ropes[] = [{id, a, b}]  a/b = item ids
-   • Ropes drawn as SVG quadratic bezier curves (catenary sag)
-   • Dragging an item → live rope update each pointermove
-   • Dragging a rope midpoint → drags BOTH connected items together
-   • Folder context break: rope removed if either end changes folderId
+   CONSTANTS & RARITIES
 ================================================================ */
-
 const FOLDER_HEADER_H = 34;
 const WORLD_W = 3000, WORLD_H = 3000;
 const SCALE_MIN = 0.25, SCALE_MAX = 3.0, SCALE_STEP = 0.15;
 const MERGE_DIST = 60;
-const ROPE_GRAB_RADIUS = 18; // world-px within which midpoint is "grabbed"
 
-/* ── State ── */
-let inventory    = [];   // [{id, name, src, qty, wx, wy, folderId}]
-let folders      = [];   // [{id, name, wx, wy, w, h}]
-let ropes        = [];   // [{id, a, b}]
-let selectedId   = null;
-let ctxTargetId  = null;
-let view         = { x: 0, y: 0, scale: 1 };
+const RARITIES = [
+  { key: 'common',    label: 'Common',    color: '#8a8a8a' },
+  { key: 'uncommon',  label: 'Uncommon',  color: '#4caf50' },
+  { key: 'rare',      label: 'Rare',      color: '#2979ff' },
+  { key: 'epic',      label: 'Epic',      color: '#aa44cc' },
+  { key: 'legendary', label: 'Legendary', color: '#ff9800' },
+  { key: 'mythic',    label: 'Mythic',    color: '#ff1744' },
+];
+function rarityColor(key) { return (RARITIES.find(r => r.key === key) || RARITIES[0]).color; }
 
-// Connecting mode state
-let connectingFromId  = null;
-let previewRopeEl     = null;
+/* ================================================================
+   STATE
+================================================================ */
+let library   = [];
+let inventory = [];
+let folders   = [];
+let ropes     = [];
 
-// Rope-drag state  (dragging midpoint = dragging both items)
-let ropeDragging      = false;
-let ropeDragRopeId    = null;
-let ropeDragMouseStart = { x: 0, y: 0 };
-let ropeDragAStart     = { x: 0, y: 0 };
-let ropeDragBStart     = { x: 0, y: 0 };
+let selectedId      = null;
+let multiSelected   = new Set();  // ids of multi-selected items
+let ctxTargetId     = null;
+let view = { x: 0, y: 0, scale: 1 };
 
-/* ── DOM refs ── */
+let connectingFromId = null;
+let previewRopeEl    = null;
+let ropeDragging     = false;
+
+// Lasso state
+let lassoActive  = false;
+let lassoStart   = { x: 0, y: 0 };
+let lassoRect    = null; // screen-space rect
+let lassoPointer = null;
+
+let sidebarQty    = 1;
+let sidebarRarity = 0;
+let pendingImg    = null;
+
+/* ================================================================
+   DOM REFS
+================================================================ */
 const viewport      = document.getElementById('canvasViewport');
 const world         = document.getElementById('canvasWorld');
 const ropeLayer     = document.getElementById('ropeLayer');
@@ -351,7 +572,11 @@ const previewImg    = document.getElementById('previewImg');
 const placeholder   = document.getElementById('uploadPlaceholder');
 const itemNameEl    = document.getElementById('itemName');
 const nameWarn      = document.getElementById('nameWarn');
+const nameWarnLink  = document.getElementById('nameWarnLink');
 const qtyDisplay    = document.getElementById('qtyDisplay');
+const rarityDisplay = document.getElementById('rarityDisplay');
+const weightInput   = document.getElementById('weightInput');
+const goldInput     = document.getElementById('goldInput');
 const addBtn        = document.getElementById('addBtn');
 const itemCount     = document.getElementById('itemCount');
 const emptyMsg      = document.getElementById('emptyMsg');
@@ -360,15 +585,22 @@ const ctrlName      = document.getElementById('ctrlName');
 const ctrlSub       = document.getElementById('ctrlSub');
 const ctrlQty       = document.getElementById('ctrlQty');
 const ctrlEject     = document.getElementById('ctrlEject');
+const ctrlWeight    = document.getElementById('ctrlWeight');
+const ctrlGold      = document.getElementById('ctrlGold');
 const toastCont     = document.getElementById('toastContainer');
 const importInput   = document.getElementById('importInput');
 const ctxMenu       = document.getElementById('ctxMenu');
 const zoomLabel     = document.getElementById('zoomLabel');
 const ctxEjectBtn   = document.getElementById('ctxEjectFolder');
 const connectBanner = document.getElementById('connectBanner');
-
-let sidebarQty = 1;
-let pendingImg  = null;
+const libGrid       = document.getElementById('libGrid');
+const libEmpty      = document.getElementById('libEmpty');
+const libFooter     = document.getElementById('libFooter');
+const libSearch     = document.getElementById('libSearch');
+const libSearchClear= document.getElementById('libSearchClear');
+const multiselectBar= document.getElementById('multiselectBar');
+const msCount       = document.getElementById('msCount');
+const lassoEl       = document.getElementById('lassoRect');
 
 /* ================================================================
    UTILITIES
@@ -380,16 +612,11 @@ function toast(msg, warn = false) {
   el.className = 'toast' + (warn ? ' warn' : '');
   el.textContent = msg;
   toastCont.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('out');
-    el.addEventListener('animationend', () => el.remove(), { once: true });
-  }, warn ? 3200 : 2400);
+  setTimeout(() => { el.classList.add('out'); el.addEventListener('animationend', () => el.remove(), { once: true }); }, warn ? 3200 : 2400);
 }
 
-function nameExists(name, excludeId = null) {
-  return inventory.some(
-    i => i.id !== excludeId && i.name.trim().toLowerCase() === name.trim().toLowerCase()
-  );
+function libNameExists(name, excludeId = null) {
+  return library.some(l => l.id !== excludeId && l.name.trim().toLowerCase() === name.trim().toLowerCase());
 }
 
 function folderRelToWorld(item) {
@@ -399,10 +626,8 @@ function folderRelToWorld(item) {
 }
 
 function itemWorldCenter(item) {
-  if (item.folderId) {
-    const w = folderRelToWorld(item);
-    return { x: w.x + 40, y: w.y + 36 };
-  }
+  if (item._dragging && item._dragWx !== undefined) return { x: item._dragWx + 40, y: item._dragWy + 36 };
+  if (item.folderId) { const w = folderRelToWorld(item); return { x: w.x + 40, y: w.y + 36 }; }
   return { x: item.wx + 40, y: item.wy + 36 };
 }
 
@@ -411,41 +636,55 @@ function inFolderBody(wx, wy, folder) {
          wy >= folder.wy + FOLDER_HEADER_H && wy <= folder.wy + folder.h + 40;
 }
 
+function screenToWorld(sx, sy) {
+  const vr = viewport.getBoundingClientRect();
+  return { x: (sx - vr.left - view.x) / view.scale, y: (sy - vr.top - view.y) / view.scale };
+}
+
 /* ================================================================
    PERSISTENCE
 ================================================================ */
-const STORAGE_KEY = 'fantasy_inventory_v5';
+const STORAGE_KEY = 'fantasy_inventory_v7';
 
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ inventory, folders, ropes, view })); }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ library, inventory, folders, ropes, view })); }
   catch (_) { toast('⚠ Storage full — export to back up!', true); }
 }
 
 function load() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    /* Try new key first, fall back to v6 */
+    let raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) raw = localStorage.getItem('fantasy_inventory_v6');
     if (!raw) return;
     const data = JSON.parse(raw);
     if (Array.isArray(data)) { inventory = data; return; }
     if (data.inventory) inventory = data.inventory;
-    if (data.folders)   folders   = data.folders;
-    if (data.ropes)     ropes     = data.ropes || [];
+    if (data.folders)   folders   = data.folders   || [];
+    if (data.ropes)     ropes     = data.ropes     || [];
     if (data.view)      view      = data.view;
-  } catch (_) { inventory = []; folders = []; ropes = []; }
+    if (data.library) {
+      library = data.library;
+    } else {
+      const seen = new Set();
+      inventory.forEach(it => {
+        const key = it.name.trim().toLowerCase();
+        if (!seen.has(key)) { seen.add(key); library.push({ id: uid(), name: it.name, src: it.src, rarity: it.rarity || 'common', weight: it.weight || 0, gold: it.gold || 0 }); }
+      });
+    }
+    /* Migrate: ensure gold field exists */
+    library.forEach(l => { if (l.gold === undefined) l.gold = 0; });
+    inventory.forEach(i => { if (i.gold === undefined) i.gold = 0; });
+  } catch (_) { inventory = []; folders = []; ropes = []; library = []; }
 }
 
 /* ================================================================
    EXPORT / IMPORT / CLEAR
 ================================================================ */
 document.getElementById('exportBtn').addEventListener('click', () => {
-  if (!inventory.length && !folders.length) { toast('Nothing to export!'); return; }
-  const blob = new Blob(
-    [JSON.stringify({ inventory, folders, ropes, view }, null, 2)],
-    { type: 'application/json' }
-  );
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob), download: 'fantasy_inventory.json',
-  });
+  if (!inventory.length && !folders.length && !library.length) { toast('Nothing to export!'); return; }
+  const blob = new Blob([JSON.stringify({ library, inventory, folders, ropes, view }, null, 2)], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'fantasy_inventory.json' });
   a.click(); URL.revokeObjectURL(a.href); toast('⬇ Exported!');
 });
 
@@ -456,13 +695,17 @@ importInput.addEventListener('change', e => {
   reader.onload = ev => {
     try {
       const data = JSON.parse(ev.target.result);
-      if (Array.isArray(data)) { inventory = data; folders = []; ropes = []; }
-      else if (data.inventory) {
-        inventory = data.inventory; folders = data.folders || [];
-        ropes = data.ropes || [];
+      if (Array.isArray(data)) {
+        inventory = data; folders = []; ropes = []; library = [];
+        const seen = new Set();
+        inventory.forEach(it => { const k = it.name.trim().toLowerCase(); if (!seen.has(k)) { seen.add(k); library.push({ id: uid(), name: it.name, src: it.src, rarity: it.rarity || 'common', weight: it.weight || 0, gold: it.gold || 0 }); } });
+      } else if (data.inventory) {
+        inventory = data.inventory; folders = data.folders || []; ropes = data.ropes || []; library = data.library || [];
         if (data.view) view = data.view;
       } else throw new Error();
-      save(); renderAll(); applyView(); toast('⬆ Inventory imported!');
+      library.forEach(l => { if (l.gold === undefined) l.gold = 0; });
+      inventory.forEach(i => { if (i.gold === undefined) i.gold = 0; });
+      save(); renderAll(); renderLibrary(); applyView(); toast('⬆ Inventory imported!');
     } catch (_) { toast('✕ Invalid file.', true); }
     importInput.value = '';
   };
@@ -471,14 +714,35 @@ importInput.addEventListener('change', e => {
 
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (!inventory.length && !folders.length) { toast('Already empty!'); return; }
-  if (!confirm('Clear your entire inventory and all folders?')) return;
-  inventory = []; folders = []; ropes = []; selectedId = null;
-  cancelConnect(); closeCtxMenu(); hideControls(); save(); renderAll();
-  toast('✕ Inventory cleared.');
+  if (!confirm('Clear your entire inventory and folders?\n(Library items will be kept.)')) return;
+  inventory = []; folders = []; ropes = []; selectedId = null; multiSelected.clear();
+  cancelConnect(); closeCtxMenu(); hideControls(); updateMultiselectBar();
+  save(); renderAll(); toast('✕ Inventory cleared. Library preserved.');
 });
 
 /* ================================================================
-   VIEW — Pan & Zoom
+   SIDEBAR TABS
+================================================================ */
+document.querySelectorAll('.sidebar-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab === 'forge' ? 'forgePanel' : 'libraryPanel').classList.add('active');
+    if (tab.dataset.tab === 'library') renderLibrary();
+  });
+});
+
+function switchToLibrary() {
+  document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="library"]').classList.add('active');
+  document.getElementById('libraryPanel').classList.add('active');
+  renderLibrary();
+}
+
+/* ================================================================
+   VIEW
 ================================================================ */
 function applyView() {
   world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
@@ -491,76 +755,164 @@ function zoomBy(delta, screenX, screenY) {
   const vr = viewport.getBoundingClientRect();
   const ox = screenX - vr.left, oy = screenY - vr.top;
   const wx = (ox - view.x) / view.scale, wy = (oy - view.y) / view.scale;
-  view.scale = newScale;
-  view.x = ox - wx * view.scale;
-  view.y = oy - wy * view.scale;
+  view.scale = newScale; view.x = ox - wx * view.scale; view.y = oy - wy * view.scale;
   applyView();
 }
 
-viewport.addEventListener('wheel', e => {
-  e.preventDefault();
-  zoomBy(e.deltaY < 0 ? SCALE_STEP : -SCALE_STEP, e.clientX, e.clientY);
-}, { passive: false });
+viewport.addEventListener('wheel', e => { e.preventDefault(); zoomBy(e.deltaY < 0 ? SCALE_STEP : -SCALE_STEP, e.clientX, e.clientY); }, { passive: false });
+document.getElementById('zoomIn').addEventListener('click', () => { const r = viewport.getBoundingClientRect(); zoomBy(SCALE_STEP, r.left + r.width / 2, r.top + r.height / 2); });
+document.getElementById('zoomOut').addEventListener('click', () => { const r = viewport.getBoundingClientRect(); zoomBy(-SCALE_STEP, r.left + r.width / 2, r.top + r.height / 2); });
+document.getElementById('zoomReset').addEventListener('click', () => { const vr = viewport.getBoundingClientRect(); view.scale = 1; view.x = vr.width / 2 - WORLD_W / 2; view.y = vr.height / 2 - WORLD_H / 2; applyView(); });
+document.getElementById('canvasFolderBtn').addEventListener('click', () => { const n = prompt('Folder name:', 'Pouch'); if (n && n.trim()) createFolder(n.trim()); });
 
-document.getElementById('zoomIn').addEventListener('click', () => {
-  const r = viewport.getBoundingClientRect();
-  zoomBy(SCALE_STEP, r.left + r.width / 2, r.top + r.height / 2);
-});
-document.getElementById('zoomOut').addEventListener('click', () => {
-  const r = viewport.getBoundingClientRect();
-  zoomBy(-SCALE_STEP, r.left + r.width / 2, r.top + r.height / 2);
-});
-document.getElementById('zoomReset').addEventListener('click', () => {
-  const vr = viewport.getBoundingClientRect();
-  view.scale = 1;
-  view.x = vr.width / 2 - WORLD_W / 2;
-  view.y = vr.height / 2 - WORLD_H / 2;
-  applyView();
-});
-
-/* ── Pan ── */
+/* ── PAN + LASSO ── */
 let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
+let panPointer = null;
 
 viewport.addEventListener('pointerdown', e => {
   if (ropeDragging) return;
   const bg = e.target === viewport || e.target === world ||
-             e.target.classList.contains('empty-msg') ||
-             e.target.classList.contains('empty-icon');
+             e.target.classList.contains('empty-msg') || e.target.classList.contains('empty-icon');
   if (!bg) return;
+
   if (connectingFromId) { cancelConnect(); return; }
-  closeCtxMenu(); deselectItem();
+  closeCtxMenu();
+
+  /* Ctrl held → start lasso; otherwise pan */
+  if (e.ctrlKey || e.metaKey) {
+    /* Lasso */
+    lassoActive = true;
+    lassoPointer = e.pointerId;
+    lassoStart = { x: e.clientX, y: e.clientY };
+    lassoEl.style.display = 'block';
+    lassoEl.style.left = lassoEl.style.top = lassoEl.style.width = lassoEl.style.height = '0px';
+    viewport.setPointerCapture(e.pointerId);
+    return;
+  }
+
+  deselectItem();
+  clearMultiSelect();
   isPanning = true;
   panStart  = { x: e.clientX, y: e.clientY };
-  viewStart = { x: view.x, y: view.y };
+  viewStart = { x: view.x,    y: view.y };
+  panPointer = e.pointerId;
   viewport.setPointerCapture(e.pointerId);
   viewport.style.cursor = 'grabbing';
 });
+
 viewport.addEventListener('pointermove', e => {
+  /* Lasso */
+  if (lassoActive && e.pointerId === lassoPointer) {
+    const vr = viewport.getBoundingClientRect();
+    const x1 = Math.min(e.clientX, lassoStart.x) - vr.left;
+    const y1 = Math.min(e.clientY, lassoStart.y) - vr.top;
+    const x2 = Math.max(e.clientX, lassoStart.x) - vr.left;
+    const y2 = Math.max(e.clientY, lassoStart.y) - vr.top;
+    lassoEl.style.left   = x1 + 'px';
+    lassoEl.style.top    = y1 + 'px';
+    lassoEl.style.width  = (x2 - x1) + 'px';
+    lassoEl.style.height = (y2 - y1) + 'px';
+    lassoRect = { x1: x1 + vr.left, y1: y1 + vr.top, x2: x2 + vr.left, y2: y2 + vr.top };
+    return;
+  }
+
+  /* Pan */
   if (!isPanning) return;
   view.x = viewStart.x + (e.clientX - panStart.x);
   view.y = viewStart.y + (e.clientY - panStart.y);
   applyView();
-});
-viewport.addEventListener('pointerup', () => {
-  isPanning = false;
-  viewport.style.cursor = '';
-  save();
+  if (connectingFromId && previewRopeEl) {
+    const w = screenToWorld(e.clientX, e.clientY);
+    const src = inventory.find(i => i.id === connectingFromId);
+    if (src) { const sc = itemWorldCenter(src); previewRopeEl.setAttribute('d', ropePathD(sc.x, sc.y, w.x, w.y)); }
+  }
 });
 
-/* ── Live rope preview mousemove (screen space → world space) ── */
+viewport.addEventListener('pointerup', e => {
+  /* Lasso end */
+  if (lassoActive && e.pointerId === lassoPointer) {
+    lassoActive = false; lassoPointer = null;
+    lassoEl.style.display = 'none';
+    if (lassoRect) {
+      applyLassoSelection(lassoRect);
+      lassoRect = null;
+    }
+    return;
+  }
+  isPanning = false; viewport.style.cursor = ''; save();
+});
+
+/* Rope preview on mouse move */
 viewport.addEventListener('pointermove', e => {
-  if (!connectingFromId || !previewRopeEl) return;
-  const vr = viewport.getBoundingClientRect();
-  const mx = (e.clientX - vr.left - view.x) / view.scale;
-  const my = (e.clientY - vr.top  - view.y) / view.scale;
+  if (!connectingFromId || !previewRopeEl || isPanning) return;
+  const w = screenToWorld(e.clientX, e.clientY);
   const src = inventory.find(i => i.id === connectingFromId);
   if (!src) return;
   const sc = itemWorldCenter(src);
-  previewRopeEl.setAttribute('d', ropePathD(sc.x, sc.y, mx, my));
+  previewRopeEl.setAttribute('d', ropePathD(sc.x, sc.y, w.x, w.y));
+});
+
+/* Lasso: select items whose center falls inside the screen-space rect */
+function applyLassoSelection(rect) {
+  const vr = viewport.getBoundingClientRect();
+  const newSel = new Set();
+  inventory.forEach(item => {
+    const c = itemWorldCenter(item);
+    /* Convert world → screen */
+    const sx = c.x * view.scale + view.x + vr.left;
+    const sy = c.y * view.scale + view.y + vr.top;
+    if (sx >= rect.x1 && sx <= rect.x2 && sy >= rect.y1 && sy <= rect.y2) {
+      newSel.add(item.id);
+    }
+  });
+  if (newSel.size > 0) {
+    multiSelected = newSel;
+    renderMultiSelectHighlights();
+    updateMultiselectBar();
+  }
+}
+
+/* ================================================================
+   MULTI-SELECT HELPERS
+================================================================ */
+function clearMultiSelect() {
+  multiSelected.clear();
+  world.querySelectorAll('.inv-item.multi-selected').forEach(el => el.classList.remove('multi-selected'));
+  updateMultiselectBar();
+}
+
+function renderMultiSelectHighlights() {
+  world.querySelectorAll('.inv-item').forEach(el => {
+    el.classList.toggle('multi-selected', multiSelected.has(el.dataset.id));
+  });
+}
+
+function updateMultiselectBar() {
+  const count = multiSelected.size;
+  multiselectBar.classList.toggle('visible', count > 1);
+  msCount.textContent = count;
+}
+
+document.getElementById('msDeleteBtn').addEventListener('click', () => {
+  if (!multiSelected.size) return;
+  if (!confirm(`Delete ${multiSelected.size} selected items?`)) return;
+  const ids = [...multiSelected];
+  ids.forEach(id => {
+    inventory = inventory.filter(i => i.id !== id);
+    removeRopesForItem(id);
+  });
+  multiSelected.clear();
+  selectedId = null; hideControls();
+  updateMultiselectBar(); save(); renderAll();
+  toast(`✕ Deleted ${ids.length} items.`);
+});
+
+document.getElementById('msCancelBtn').addEventListener('click', () => {
+  clearMultiSelect();
 });
 
 /* ================================================================
-   SIDEBAR
+   FORGE PANEL
 ================================================================ */
 uploadZone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => { if (e.target.files[0]) readImg(e.target.files[0]); fileInput.value = ''; });
@@ -574,53 +926,71 @@ uploadZone.addEventListener('drop', e => {
 
 function readImg(file) {
   const r = new FileReader();
-  r.onload = ev => {
-    pendingImg = ev.target.result;
-    previewImg.src = pendingImg; previewImg.style.display = 'block';
-    placeholder.style.display = 'none';
-    checkReady();
-  };
+  r.onload = ev => { pendingImg = ev.target.result; previewImg.src = pendingImg; previewImg.style.display = 'block'; placeholder.style.display = 'none'; checkReady(); };
   r.readAsDataURL(file);
 }
 
 function checkReady() {
   const name = itemNameEl.value.trim();
-  const exists = name && nameExists(name);
+  const exists = name && libNameExists(name);
   nameWarn.classList.toggle('visible', !!exists);
   itemNameEl.classList.toggle('error', !!exists);
   addBtn.disabled = !(pendingImg && name && !exists);
 }
 
 itemNameEl.addEventListener('input', checkReady);
+nameWarnLink.addEventListener('click', () => switchToLibrary());
 document.getElementById('qtyMinus').addEventListener('click', () => { if (sidebarQty > 1) { sidebarQty--; qtyDisplay.textContent = sidebarQty; } });
-document.getElementById('qtyPlus').addEventListener('click',  () => { sidebarQty++; qtyDisplay.textContent = sidebarQty; });
+document.getElementById('qtyPlus').addEventListener('click', () => { sidebarQty++; qtyDisplay.textContent = sidebarQty; });
+
+function updateRarityDisplay() {
+  const r = RARITIES[sidebarRarity];
+  rarityDisplay.textContent = r.label;
+  rarityDisplay.className   = `selector-display rarity-${r.key}`;
+}
+document.getElementById('rarityPrev').addEventListener('click', () => { sidebarRarity = (sidebarRarity - 1 + RARITIES.length) % RARITIES.length; updateRarityDisplay(); });
+document.getElementById('rarityNext').addEventListener('click', () => { sidebarRarity = (sidebarRarity + 1) % RARITIES.length; updateRarityDisplay(); });
+updateRarityDisplay();
 
 /* ================================================================
    ADD ITEM
 ================================================================ */
 addBtn.addEventListener('click', () => {
-  const name = itemNameEl.value.trim();
+  const name   = itemNameEl.value.trim();
+  const weight = parseFloat(weightInput.value) || 0;
+  const gold   = parseFloat(goldInput.value)   || 0;
   if (!name || !pendingImg) return;
-  if (nameExists(name)) { toast('⚠ An item with that name already exists!', true); return; }
+  if (libNameExists(name)) { toast('⚠ A library item with that name already exists!', true); return; }
+
+  const rarity   = RARITIES[sidebarRarity].key;
+  const libEntry = { id: uid(), name, src: pendingImg, rarity, weight, gold };
+  library.push(libEntry);
+  placeLibItemOnCanvas(libEntry, sidebarQty);
+
+  itemNameEl.value = ''; pendingImg = null; sidebarQty = 1; sidebarRarity = 0;
+  qtyDisplay.textContent = '1'; weightInput.value = '0.0'; goldInput.value = '0';
+  previewImg.style.display = 'none'; previewImg.src = '';
+  placeholder.style.display = 'flex';
+  updateRarityDisplay(); checkReady();
+  toast(`✦ "${name}" forged & added to Library!`);
+});
+
+function placeLibItemOnCanvas(libEntry, qty) {
   const vr = viewport.getBoundingClientRect();
-  const centreX = (vr.width / 2 - view.x) / view.scale;
-  const centreY = (vr.height / 2 - view.y) / view.scale;
-  const scatter = 140;
+  const cx = (vr.width  / 2 - view.x) / view.scale;
+  const cy = (vr.height / 2 - view.y) / view.scale;
+  const scatter = 130;
   const item = {
-    id: uid(), name, src: pendingImg, qty: sidebarQty,
-    wx: centreX + (Math.random() - 0.5) * scatter,
-    wy: centreY + (Math.random() - 0.5) * scatter,
+    id: uid(), name: libEntry.name, src: libEntry.src,
+    qty, rarity: libEntry.rarity, weight: libEntry.weight || 0, gold: libEntry.gold || 0,
+    wx: cx + (Math.random() - 0.5) * scatter,
+    wy: cy + (Math.random() - 0.5) * scatter,
     folderId: null,
   };
   inventory.push(item);
   save(); renderAll();
-  itemNameEl.value = ''; pendingImg = null; sidebarQty = 1;
-  qtyDisplay.textContent = '1';
-  previewImg.style.display = 'none'; previewImg.src = '';
-  placeholder.style.display = 'flex';
-  checkReady();
-  toast(`✦ "${name}" forged!`);
-});
+  return item;
+}
 
 /* ================================================================
    CREATE FOLDER
@@ -630,217 +1000,270 @@ function createFolder(name) {
   const cx = (vr.width / 2 - view.x) / view.scale;
   const cy = (vr.height / 2 - view.y) / view.scale;
   const folder = { id: uid(), name, wx: cx - 120, wy: cy - 90, w: 260, h: 200 };
-  folders.push(folder);
-  save(); renderAll();
+  folders.push(folder); save(); renderAll();
   toast(`📁 Folder "${name}" created!`);
   return folder;
 }
 
-document.getElementById('sidebarFolderBtn').addEventListener('click', () => {
-  const n = prompt('Folder name:', 'Pouch');
-  if (n && n.trim()) createFolder(n.trim());
-});
+/* ================================================================
+   LIBRARY PANEL
+================================================================ */
+function renderLibrary() {
+  const query    = libSearch.value.trim().toLowerCase();
+  const filtered = query ? library.filter(l => l.name.toLowerCase().includes(query)) : library;
+
+  libGrid.innerHTML = '';
+
+  if (!library.length) {
+    libEmpty.style.display = 'flex'; libGrid.style.display = 'none';
+  } else {
+    libEmpty.style.display = 'none'; libGrid.style.display = 'flex';
+    filtered.forEach(entry => libGrid.appendChild(buildLibCard(entry)));
+  }
+
+  libFooter.textContent = library.length
+    ? `${library.length} item${library.length !== 1 ? 's' : ''} in library${query ? ` (${filtered.length} match)` : ''}`
+    : 'Library is empty';
+}
+
+function buildLibCard(entry) {
+  const card = document.createElement('div');
+  card.className = 'lib-card'; card.dataset.lid = entry.id;
+  card.title = `${entry.name}\nRarity: ${entry.rarity}\nWeight: ${entry.weight}kg · Gold: ${entry.gold}gp\n\nClick to place · Drag onto canvas`;
+
+  const rc = rarityColor(entry.rarity);
+  const frame = document.createElement('div');
+  frame.className = 'lib-card-frame';
+  frame.style.borderColor = rc; frame.style.boxShadow = `0 0 5px ${rc}55`;
+
+  const img = document.createElement('img');
+  img.src = entry.src; img.alt = entry.name; img.draggable = false;
+  frame.appendChild(img);
+
+  const dot = document.createElement('div');
+  dot.className = 'lib-card-rarity'; dot.style.color = rc; dot.style.background = rc;
+  frame.appendChild(dot);
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'lib-card-name'; nameEl.textContent = entry.name;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'lib-card-remove'; removeBtn.textContent = '×';
+  removeBtn.title = `Remove "${entry.name}" from library`;
+  /* FIX: stop propagation so the card click / drag doesn't fire */
+  removeBtn.addEventListener('pointerdown', e => e.stopPropagation());
+  removeBtn.addEventListener('click', e => {
+    e.stopPropagation(); e.preventDefault();
+    removeFromLibrary(entry.id);
+  });
+
+  card.appendChild(frame); card.appendChild(nameEl); card.appendChild(removeBtn);
+
+  /* ── Drag from library card onto canvas ──
+     FIX: track whether a real drag occurred. If the pointer never moved
+     more than 6px, treat it as a click (handled in pointerup). If it DID
+     move, place on drop and do NOT fire the click path. */
+  let libDragging = false, libMoved = false, libMS = { x: 0, y: 0 };
+  let ghostEl = null;
+
+  card.addEventListener('pointerdown', e => {
+    /* Ignore the remove button */
+    if (e.target === removeBtn) return;
+    e.stopPropagation();
+    libDragging = true; libMoved = false;
+    libMS = { x: e.clientX, y: e.clientY };
+    card.setPointerCapture(e.pointerId);
+  });
+
+  card.addEventListener('pointermove', e => {
+    if (!libDragging) return;
+    const dx = e.clientX - libMS.x, dy = e.clientY - libMS.y;
+    if (!libMoved && Math.hypot(dx, dy) < 6) return;
+
+    if (!libMoved) {
+      libMoved = true;
+      ghostEl = document.createElement('div');
+      ghostEl.style.cssText = `
+        position:fixed;pointer-events:none;z-index:9000;
+        width:56px;height:56px;border:2px solid ${rc};border-radius:6px;
+        background:rgba(0,0,0,0.7);overflow:hidden;opacity:0.85;
+        box-shadow:0 4px 20px rgba(0,0,0,0.6),0 0 12px ${rc}88;
+        transform:translate(-50%,-50%);
+      `;
+      const gImg = document.createElement('img');
+      gImg.src = entry.src;
+      gImg.style.cssText = 'width:100%;height:100%;object-fit:contain;padding:4px;';
+      ghostEl.appendChild(gImg);
+      document.body.appendChild(ghostEl);
+    }
+    if (ghostEl) { ghostEl.style.left = e.clientX + 'px'; ghostEl.style.top = e.clientY + 'px'; }
+
+    const vr = viewport.getBoundingClientRect();
+    const over = e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom;
+    viewport.style.boxShadow = over ? `inset 0 0 0 2px ${rc}` : '';
+  });
+
+  card.addEventListener('pointerup', e => {
+    if (!libDragging) return;
+    libDragging = false;
+    if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+    viewport.style.boxShadow = '';
+
+    if (!libMoved) {
+      /* ── CLICK: place at canvas centre ── */
+      placeLibItemOnCanvas(entry, 1);
+      toast(`✦ "${entry.name}" placed on canvas!`);
+      return;
+    }
+
+    /* ── DRAG DROP ── */
+    const vr = viewport.getBoundingClientRect();
+    const over = e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom;
+    if (!over) { toast('Drop onto the canvas to place the item', true); return; }
+
+    /* Convert screen → world, offset so item centre lands under cursor */
+    const wx = (e.clientX - vr.left - view.x) / view.scale - 40;
+    const wy = (e.clientY - vr.top  - view.y) / view.scale - 36;
+
+    const item = {
+      id: uid(), name: entry.name, src: entry.src,
+      qty: 1, rarity: entry.rarity, weight: entry.weight || 0, gold: entry.gold || 0,
+      wx, wy, folderId: null,
+    };
+    inventory.push(item);
+    save(); renderAll();
+    toast(`✦ "${entry.name}" placed!`);
+    /* NOTE: no extra click event fires after pointerup when setPointerCapture is active */
+  });
+
+  return card;
+}
+
+function removeFromLibrary(libId) {
+  const entry = library.find(l => l.id === libId);
+  if (!entry) return;
+  const inUse = inventory.filter(i => i.name.toLowerCase() === entry.name.toLowerCase()).length;
+  const msg   = inUse > 0
+    ? `Remove "${entry.name}" from the library?\n(${inUse} canvas instance${inUse !== 1 ? 's' : ''} will remain.)`
+    : `Remove "${entry.name}" from the library?`;
+  if (!confirm(msg)) return;
+  library = library.filter(l => l.id !== libId);
+  save(); renderLibrary();
+  toast(`📚 "${entry.name}" removed from library.`);
+}
+
+libSearch.addEventListener('input', () => { libSearchClear.classList.toggle('hidden', !libSearch.value); renderLibrary(); });
+libSearchClear.addEventListener('click', () => { libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); });
 
 /* ================================================================
    ROPE SYSTEM
 ================================================================ */
-
-/* Catenary-like quadratic bezier path string */
 function ropePathD(x1, y1, x2, y2) {
   const dist = Math.hypot(x2 - x1, y2 - y1);
   const sag  = Math.min(dist * 0.22, 90);
-  const mx   = (x1 + x2) / 2;
-  const my   = (y1 + y2) / 2 + sag;
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + sag;
   return `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
 }
 
-/* Rope visual colour stops for a braided rope look */
 function buildRopeElement(rope) {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.dataset.ropeId = rope.id;
 
-  // Shadow
   const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  shadow.setAttribute('class', 'rope-path');
-  shadow.setAttribute('stroke', 'rgba(0,0,0,0.45)');
-  shadow.setAttribute('stroke-width', '5');
-  shadow.style.pointerEvents = 'none';
+  shadow.setAttribute('class', 'rope-path'); shadow.setAttribute('stroke', 'rgba(0,0,0,0.45)'); shadow.setAttribute('stroke-width', '5'); shadow.style.pointerEvents = 'none';
 
-  // Main rope body
   const body = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  body.setAttribute('class', 'rope-path');
-  body.setAttribute('stroke', '#7a4e1a');
-  body.setAttribute('stroke-width', '4');
-  body.style.pointerEvents = 'none';
+  body.setAttribute('class', 'rope-path'); body.setAttribute('stroke', '#7a4e1a'); body.setAttribute('stroke-width', '4'); body.style.pointerEvents = 'none';
 
-  // Highlight strand
   const highlight = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  highlight.setAttribute('class', 'rope-path');
-  highlight.setAttribute('stroke', '#c8922a');
-  highlight.setAttribute('stroke-width', '1.5');
-  highlight.setAttribute('stroke-dasharray', '6 8');
-  highlight.style.pointerEvents = 'none';
+  highlight.setAttribute('class', 'rope-path'); highlight.setAttribute('stroke', '#c8922a'); highlight.setAttribute('stroke-width', '1.5'); highlight.setAttribute('stroke-dasharray', '6 8'); highlight.style.pointerEvents = 'none';
 
-  // Invisible wide hit area for dragging/clicking
   const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  hit.setAttribute('stroke', 'transparent');
-  hit.setAttribute('stroke-width', '24');
-  hit.setAttribute('fill', 'none');
-  hit.style.cursor = 'grab';
-  hit.style.pointerEvents = 'stroke';
-  hit.dataset.ropeId = rope.id;
+  hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '24'); hit.setAttribute('fill', 'none');
+  hit.style.cursor = 'grab'; hit.style.pointerEvents = 'stroke'; hit.dataset.ropeId = rope.id;
 
-  g.appendChild(shadow);
-  g.appendChild(body);
-  g.appendChild(highlight);
-  g.appendChild(hit);
+  g.appendChild(shadow); g.appendChild(body); g.appendChild(highlight); g.appendChild(hit);
 
-  // Drag rope midpoint → move both items
-  let rdDragging = false, rdMoved = false;
-  let rdMouseStart = { x: 0, y: 0 };
-  let rdAStart = { x: 0, y: 0 }, rdBStart = { x: 0, y: 0 };
+  let rdDragging = false, rdMoved = false, rdMS = {x:0,y:0}, rdA = {x:0,y:0}, rdB = {x:0,y:0};
 
   hit.addEventListener('pointerdown', e => {
     e.stopPropagation();
     if (connectingFromId) return;
     closeCtxMenu();
-    const ia = inventory.find(i => i.id === rope.a);
-    const ib = inventory.find(i => i.id === rope.b);
+    const ia = inventory.find(i => i.id === rope.a), ib = inventory.find(i => i.id === rope.b);
     if (!ia || !ib) return;
-    // Only allow dragging free items (not foldered)
-    if (ia.folderId || ib.folderId) {
-      toast('Cannot drag rope — items are inside folders', true);
-      return;
-    }
-    rdDragging = true; rdMoved = false;
-    ropeDragging = true;
-    const vr = viewport.getBoundingClientRect();
-    rdMouseStart = { x: e.clientX, y: e.clientY };
-    rdAStart = { x: ia.wx, y: ia.wy };
-    rdBStart = { x: ib.wx, y: ib.wy };
-    hit.setPointerCapture(e.pointerId);
-    hit.style.cursor = 'grabbing';
+    if (ia.folderId || ib.folderId) { toast('Cannot drag rope — items are inside folders', true); return; }
+    rdDragging = true; rdMoved = false; ropeDragging = true;
+    rdMS = {x:e.clientX,y:e.clientY}; rdA = {x:ia.wx,y:ia.wy}; rdB = {x:ib.wx,y:ib.wy};
+    hit.setPointerCapture(e.pointerId); hit.style.cursor = 'grabbing';
   });
-
   hit.addEventListener('pointermove', e => {
     if (!rdDragging) return;
-    const dx = (e.clientX - rdMouseStart.x) / view.scale;
-    const dy = (e.clientY - rdMouseStart.y) / view.scale;
-    if (!rdMoved && Math.hypot(dx, dy) < 4) return;
+    const dx = (e.clientX - rdMS.x) / view.scale, dy = (e.clientY - rdMS.y) / view.scale;
+    if (!rdMoved && Math.hypot(dx,dy) < 4) return;
     rdMoved = true;
-    const ia = inventory.find(i => i.id === rope.a);
-    const ib = inventory.find(i => i.id === rope.b);
+    const ia = inventory.find(i => i.id === rope.a), ib = inventory.find(i => i.id === rope.b);
     if (!ia || !ib) return;
-    ia.wx = rdAStart.x + dx; ia.wy = rdAStart.y + dy;
-    ib.wx = rdBStart.x + dx; ib.wy = rdBStart.y + dy;
-    // Update DOM positions live
-    const elA = world.querySelector(`[data-id="${ia.id}"]`);
-    const elB = world.querySelector(`[data-id="${ib.id}"]`);
-    if (elA) { elA.style.left = ia.wx + 'px'; elA.style.top = ia.wy + 'px'; }
-    if (elB) { elB.style.left = ib.wx + 'px'; elB.style.top = ib.wy + 'px'; }
+    ia.wx = rdA.x + dx; ia.wy = rdA.y + dy; ib.wx = rdB.x + dx; ib.wy = rdB.y + dy;
+    const elA = world.querySelector(`[data-id="${ia.id}"]`), elB = world.querySelector(`[data-id="${ib.id}"]`);
+    if (elA) { elA.style.left = ia.wx+'px'; elA.style.top = ia.wy+'px'; }
+    if (elB) { elB.style.left = ib.wx+'px'; elB.style.top = ib.wy+'px'; }
     updateAllRopePaths();
   });
-
-  hit.addEventListener('pointerup', e => {
+  hit.addEventListener('pointerup', () => {
     if (!rdDragging) return;
-    rdDragging = false; ropeDragging = false;
-    hit.style.cursor = 'grab';
-    if (!rdMoved) {
-      // Click rope → offer to remove
-      if (confirm('Remove this rope connection?')) {
-        ropes = ropes.filter(r => r.id !== rope.id);
-        save(); renderRopes();
-        toast('🔗 Connection removed.');
-      }
-    } else {
-      save();
-    }
+    rdDragging = false; ropeDragging = false; hit.style.cursor = 'grab';
+    if (!rdMoved) { if (confirm('Remove this rope connection?')) { ropes = ropes.filter(r => r.id !== rope.id); save(); renderRopes(); toast('🔗 Connection removed.'); } }
+    else save();
   });
-
   return g;
 }
 
-/* Update path data for all rope elements without rebuilding */
 function updateAllRopePaths() {
   ropes.forEach(rope => {
-    const ia = inventory.find(i => i.id === rope.a);
-    const ib = inventory.find(i => i.id === rope.b);
+    const ia = inventory.find(i => i.id === rope.a), ib = inventory.find(i => i.id === rope.b);
     if (!ia || !ib) return;
     const ca = itemWorldCenter(ia), cb = itemWorldCenter(ib);
-    const d  = ropePathD(ca.x, ca.y, cb.x, cb.y);
-    const g  = ropeLayer.querySelector(`g[data-rope-id="${rope.id}"]`);
+    const d = ropePathD(ca.x, ca.y, cb.x, cb.y);
+    const g = ropeLayer.querySelector(`g[data-rope-id="${rope.id}"]`);
     if (g) g.querySelectorAll('path').forEach(p => p.setAttribute('d', d));
   });
-  // Also update preview rope if active
-  if (previewRopeEl && connectingFromId) {
-    // preview is updated by pointermove — nothing extra needed
-  }
 }
 
-/* Full rebuild of rope SVG elements */
 function renderRopes() {
-  // Remove old rope groups (not the preview)
   ropeLayer.querySelectorAll('g[data-rope-id]').forEach(el => el.remove());
-
-  // Clean orphans
   const ids = new Set(inventory.map(i => i.id));
   ropes = ropes.filter(r => ids.has(r.a) && ids.has(r.b));
-
   ropes.forEach(rope => {
-    const ia = inventory.find(i => i.id === rope.a);
-    const ib = inventory.find(i => i.id === rope.b);
+    const ia = inventory.find(i => i.id === rope.a), ib = inventory.find(i => i.id === rope.b);
     if (!ia || !ib) return;
     const ca = itemWorldCenter(ia), cb = itemWorldCenter(ib);
-    const d  = ropePathD(ca.x, ca.y, cb.x, cb.y);
-    const g  = buildRopeElement(rope);
+    const d = ropePathD(ca.x, ca.y, cb.x, cb.y);
+    const g = buildRopeElement(rope);
     g.querySelectorAll('path').forEach(p => p.setAttribute('d', d));
-    // Insert before preview rope (if exists)
-    if (previewRopeEl) ropeLayer.insertBefore(g, previewRopeEl);
-    else ropeLayer.appendChild(g);
+    if (previewRopeEl) ropeLayer.insertBefore(g, previewRopeEl); else ropeLayer.appendChild(g);
   });
 }
 
-function hasRope(idA, idB) {
-  return ropes.some(r => (r.a === idA && r.b === idB) || (r.a === idB && r.b === idA));
-}
-
-function removeRopesForItem(id) {
-  ropes = ropes.filter(r => r.a !== id && r.b !== id);
-  renderRopes();
-}
-
-/* Called when item moves in/out of a folder — break its ropes */
+function hasRope(idA, idB) { return ropes.some(r => (r.a===idA&&r.b===idB)||(r.a===idB&&r.b===idA)); }
+function removeRopesForItem(id) { ropes = ropes.filter(r => r.a !== id && r.b !== id); renderRopes(); }
 function breakRopesOnContextChange(id) {
   const had = ropes.some(r => r.a === id || r.b === id);
-  if (had) {
-    ropes = ropes.filter(r => r.a !== id && r.b !== id);
-    renderRopes();
-    toast('🔗 Rope(s) broken — item changed context');
-  }
+  if (had) { ropes = ropes.filter(r => r.a !== id && r.b !== id); renderRopes(); toast('🔗 Rope(s) broken — item changed context'); }
 }
 
-/* ── Connecting mode ── */
 function startConnect(fromId) {
-  connectingFromId = fromId;
-  connectBanner.classList.add('visible');
-  world.querySelectorAll('.inv-item').forEach(el => {
-    el.classList.toggle('connecting-source', el.dataset.id === fromId);
-  });
-  // Create preview rope element
+  connectingFromId = fromId; connectBanner.classList.add('visible');
+  world.querySelectorAll('.inv-item').forEach(el => el.classList.toggle('connecting-source', el.dataset.id === fromId));
   previewRopeEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   previewRopeEl.setAttribute('class', 'rope-preview-path');
   ropeLayer.appendChild(previewRopeEl);
 }
-
 function cancelConnect() {
-  connectingFromId = null;
-  connectBanner.classList.remove('visible');
+  connectingFromId = null; connectBanner.classList.remove('visible');
   if (previewRopeEl) { previewRopeEl.remove(); previewRopeEl = null; }
-  world.querySelectorAll('.inv-item').forEach(el => {
-    el.classList.remove('connecting-source', 'connect-hover');
-  });
+  world.querySelectorAll('.inv-item').forEach(el => el.classList.remove('connecting-source', 'connect-hover'));
 }
-
 document.getElementById('cancelConnectBtn').addEventListener('click', cancelConnect);
 
 /* ================================================================
@@ -848,35 +1271,22 @@ document.getElementById('cancelConnectBtn').addEventListener('click', cancelConn
 ================================================================ */
 function renderAll() {
   world.querySelectorAll('.inv-folder, .inv-item').forEach(el => el.remove());
-
   folders.forEach(f => world.appendChild(buildFolderEl(f)));
-
   inventory.forEach(item => {
     const el = buildItemEl(item);
     if (item.folderId) {
       const bodyEl = world.querySelector(`.inv-folder[data-fid="${item.folderId}"] .folder-body`);
-      if (bodyEl) { bodyEl.appendChild(el); }
-      else { item.folderId = null; world.appendChild(el); }
-    } else {
-      world.appendChild(el);
-    }
+      if (bodyEl) bodyEl.appendChild(el); else { item.folderId = null; world.appendChild(el); }
+    } else { world.appendChild(el); }
   });
-
   folders.forEach(f => {
     const cnt = inventory.filter(i => i.folderId === f.id).length;
     const label = world.querySelector(`.inv-folder[data-fid="${f.id}"] .folder-count`);
     if (label) label.textContent = cnt ? `${cnt} item${cnt !== 1 ? 's' : ''}` : '';
   });
-
   emptyMsg.style.display = (!inventory.length && !folders.length) ? 'block' : 'none';
-  updateCount();
-
-  if (selectedId) {
-    const el = world.querySelector(`[data-id="${selectedId}"]`);
-    if (el) el.classList.add('selected');
-  }
-
-  renderRopes();
+  updateCount(); renderRopes(); renderMultiSelectHighlights();
+  if (selectedId) { const el = world.querySelector(`[data-id="${selectedId}"]`); if (el) el.classList.add('selected'); }
 }
 
 function updateCount() {
@@ -891,13 +1301,8 @@ function updateCount() {
 ================================================================ */
 function buildFolderEl(folder) {
   const el = document.createElement('div');
-  el.className = 'inv-folder';
-  el.dataset.fid = folder.id;
-  el.style.left = folder.wx + 'px';
-  el.style.top  = folder.wy + 'px';
-  el.style.width  = folder.w + 'px';
-  el.style.height = folder.h + 'px';
-
+  el.className = 'inv-folder'; el.dataset.fid = folder.id;
+  el.style.cssText = `left:${folder.wx}px;top:${folder.wy}px;width:${folder.w}px;height:${folder.h}px;`;
   el.innerHTML = `
     <div class="folder-header">
       <span class="folder-icon">📁</span>
@@ -909,102 +1314,50 @@ function buildFolderEl(folder) {
     </div>
     <div class="folder-body"></div>
     <div class="folder-count"></div>
-    <div class="folder-resize"></div>
-  `;
+    <div class="folder-resize"></div>`;
 
   el.querySelector('[data-action="rename"]').addEventListener('click', e => {
     e.stopPropagation();
     const nameSpan = el.querySelector('.folder-name-el');
-    const input = document.createElement('input');
-    input.className = 'folder-rename-input';
-    input.value = folder.name;
-    nameSpan.replaceWith(input);
-    input.focus(); input.select();
-    function commit() {
-      folder.name = input.value.trim() || folder.name;
-      const restored = document.createElement('span');
-      restored.className = 'folder-name-el';
-      restored.textContent = folder.name;
-      input.replaceWith(restored);
-      save();
-    }
-    input.addEventListener('blur', commit, { once: true });
-    input.addEventListener('keydown', ev => {
-      if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
-      if (ev.key === 'Escape') { input.value = folder.name; input.blur(); }
-    });
+    const input = document.createElement('input'); input.className = 'folder-rename-input'; input.value = folder.name;
+    nameSpan.replaceWith(input); input.focus(); input.select();
+    function commit() { folder.name = input.value.trim() || folder.name; const s = document.createElement('span'); s.className = 'folder-name-el'; s.textContent = folder.name; input.replaceWith(s); save(); }
+    input.addEventListener('blur', commit, {once:true});
+    input.addEventListener('keydown', ev => { if (ev.key==='Enter'){ev.preventDefault();input.blur();} if (ev.key==='Escape'){input.value=folder.name;input.blur();} });
   });
 
   el.querySelector('[data-action="delete"]').addEventListener('click', e => {
     e.stopPropagation();
     const inside = inventory.filter(i => i.folderId === folder.id).length;
-    const msg = inside > 0
-      ? `Delete folder "${folder.name}"? The ${inside} item(s) inside will be freed.`
-      : `Delete folder "${folder.name}"?`;
-    if (!confirm(msg)) return;
-    inventory.forEach(i => {
-      if (i.folderId === folder.id) {
-        const w = folderRelToWorld(i);
-        i.folderId = null; i.wx = w.x; i.wy = w.y;
-      }
-    });
-    folders = folders.filter(f => f.id !== folder.id);
-    save(); renderAll();
-    toast(`📁 Folder "${folder.name}" deleted.`);
+    if (!confirm(inside > 0 ? `Delete folder "${folder.name}"? The ${inside} item(s) inside will be freed.` : `Delete folder "${folder.name}"?`)) return;
+    inventory.forEach(i => { if (i.folderId === folder.id) { const w = folderRelToWorld(i); i.folderId = null; i.wx = w.x; i.wy = w.y; } });
+    folders = folders.filter(f => f.id !== folder.id); save(); renderAll(); toast(`📁 Folder "${folder.name}" deleted.`);
   });
 
   const header = el.querySelector('.folder-header');
-  let fDragging = false, fHasMoved = false;
-  let fMouseStart = { x: 0, y: 0 }, fFolderStart = { x: 0, y: 0 };
-
+  let fDragging=false,fHasMoved=false,fMS={x:0,y:0},fFS={x:0,y:0};
   header.addEventListener('pointerdown', e => {
     if (e.target.closest('.folder-action-btn')) return;
-    e.stopPropagation();
-    closeCtxMenu(); deselectItem();
-    fDragging = true; fHasMoved = false;
-    fMouseStart  = { x: e.clientX, y: e.clientY };
-    fFolderStart = { x: folder.wx, y: folder.wy };
+    e.stopPropagation(); closeCtxMenu(); deselectItem(); clearMultiSelect();
+    fDragging=true;fHasMoved=false; fMS={x:e.clientX,y:e.clientY}; fFS={x:folder.wx,y:folder.wy};
     header.setPointerCapture(e.pointerId);
   });
   header.addEventListener('pointermove', e => {
     if (!fDragging) return;
-    const dx = (e.clientX - fMouseStart.x) / view.scale;
-    const dy = (e.clientY - fMouseStart.y) / view.scale;
-    if (!fHasMoved && Math.hypot(dx, dy) < 4) return;
-    fHasMoved = true;
-    el.classList.add('folder-dragging');
-    folder.wx = fFolderStart.x + dx;
-    folder.wy = fFolderStart.y + dy;
-    el.style.left = folder.wx + 'px';
-    el.style.top  = folder.wy + 'px';
+    const dx=(e.clientX-fMS.x)/view.scale,dy=(e.clientY-fMS.y)/view.scale;
+    if (!fHasMoved&&Math.hypot(dx,dy)<4) return;
+    fHasMoved=true; el.classList.add('folder-dragging');
+    folder.wx=fFS.x+dx; folder.wy=fFS.y+dy;
+    el.style.left=folder.wx+'px'; el.style.top=folder.wy+'px';
     updateAllRopePaths();
   });
-  header.addEventListener('pointerup', () => {
-    if (!fDragging) return;
-    fDragging = false;
-    el.classList.remove('folder-dragging');
-    if (fHasMoved) save();
-  });
+  header.addEventListener('pointerup', () => { if (!fDragging) return; fDragging=false; el.classList.remove('folder-dragging'); if (fHasMoved) save(); });
 
-  const resizeHandle = el.querySelector('.folder-resize');
-  let rDragging = false, rStart = { x: 0, y: 0 }, rWStart = 0, rHStart = 0;
-  resizeHandle.addEventListener('pointerdown', e => {
-    e.stopPropagation();
-    rDragging = true;
-    rStart = { x: e.clientX, y: e.clientY };
-    rWStart = folder.w; rHStart = folder.h;
-    resizeHandle.setPointerCapture(e.pointerId);
-  });
-  resizeHandle.addEventListener('pointermove', e => {
-    if (!rDragging) return;
-    const dx = (e.clientX - rStart.x) / view.scale;
-    const dy = (e.clientY - rStart.y) / view.scale;
-    folder.w = Math.max(160, rWStart + dx);
-    folder.h = Math.max(120, rHStart + dy);
-    el.style.width  = folder.w + 'px';
-    el.style.height = folder.h + 'px';
-  });
-  resizeHandle.addEventListener('pointerup', () => { rDragging = false; save(); });
+  const rh = el.querySelector('.folder-resize');
+  let rDragging=false,rStart={x:0,y:0},rW=0,rH=0;
+  rh.addEventListener('pointerdown', e => { e.stopPropagation(); rDragging=true; rStart={x:e.clientX,y:e.clientY}; rW=folder.w; rH=folder.h; rh.setPointerCapture(e.pointerId); });
+  rh.addEventListener('pointermove', e => { if (!rDragging) return; folder.w=Math.max(160,(rW+(e.clientX-rStart.x)/view.scale)); folder.h=Math.max(120,(rH+(e.clientY-rStart.y)/view.scale)); el.style.width=folder.w+'px'; el.style.height=folder.h+'px'; });
+  rh.addEventListener('pointerup', () => { rDragging=false; save(); });
 
   return el;
 }
@@ -1014,229 +1367,184 @@ function buildFolderEl(folder) {
 ================================================================ */
 function buildItemEl(item) {
   const el = document.createElement('div');
-  el.className  = 'inv-item';
-  el.dataset.id = item.id;
-  el.style.left = item.wx + 'px';
-  el.style.top  = item.wy + 'px';
+  el.className = 'inv-item'; el.dataset.id = item.id;
+  el.style.left = item.wx+'px'; el.style.top = item.wy+'px';
+
+  const rc = item.rarity ? rarityColor(item.rarity) : null;
+  const rarityFrameStyle = rc ? `style="--rarity-color:${rc};border-color:${rc};box-shadow:0 0 6px ${rc}66"` : '';
+  const rarityFrameClass = rc ? 'item-frame has-rarity' : 'item-frame';
 
   el.innerHTML = `
-    <div class="item-frame">
+    <div class="${rarityFrameClass}" ${rarityFrameStyle}>
       <img src="${item.src}" alt="${item.name}" draggable="false"/>
       <div class="item-qty">${item.qty > 1 ? item.qty : ''}</div>
     </div>
-    <div class="item-name">${item.name}</div>
-  `;
+    <div class="item-name">${item.name}</div>`;
 
-  let dragging = false, hasMoved = false;
-  let mouseStart = { x: 0, y: 0 };
-  let dragWorldStart = { x: 0, y: 0 };
-  let mergeTargetId = null;
+  let dragging=false,hasMoved=false;
+  let mouseStart={x:0,y:0},dragWorldStart={x:0,y:0};
+  let mergeTargetId=null;
+
+  /* ── Multi-drag state ── */
+  let multiDragStarts = []; // [{item, sx, sy}] for co-selected items
 
   el.addEventListener('pointerdown', e => {
     e.stopPropagation();
 
-    /* ── Connecting mode: this item is the target ── */
+    /* Connecting mode */
     if (connectingFromId) {
       if (item.id === connectingFromId) { cancelConnect(); return; }
       const srcItem = inventory.find(i => i.id === connectingFromId);
       if (!srcItem) { cancelConnect(); return; }
-
-      // Both must be in the same context (both free, or same folder)
-      const sameCtx = (item.folderId === srcItem.folderId);
-      if (!sameCtx) {
-        toast('⚠ Can only connect items in the same context', true);
-        cancelConnect(); return;
-      }
-      if (hasRope(connectingFromId, item.id)) {
-        toast('Already connected!', true);
-        cancelConnect(); return;
-      }
+      if (item.folderId !== srcItem.folderId) { toast('⚠ Can only connect items in the same context', true); cancelConnect(); return; }
+      if (hasRope(connectingFromId, item.id)) { toast('Already connected!', true); cancelConnect(); return; }
       ropes.push({ id: uid(), a: connectingFromId, b: item.id });
       toast(`🔗 Connected "${srcItem.name}" ↔ "${item.name}"`);
-      save(); renderAll();
-      cancelConnect();
-      return;
+      save(); renderAll(); cancelConnect(); return;
     }
 
     closeCtxMenu();
     if (ropeDragging) return;
-    dragging = true; hasMoved = false;
-    mouseStart = { x: e.clientX, y: e.clientY };
 
-    if (item.folderId) {
-      const worldPos = folderRelToWorld(item);
-      dragWorldStart = { x: worldPos.x, y: worldPos.y };
-    } else {
-      dragWorldStart = { x: item.wx, y: item.wy };
+    /* Ctrl+click → toggle in multi-select */
+    if (e.ctrlKey || e.metaKey) {
+      if (multiSelected.has(item.id)) multiSelected.delete(item.id);
+      else multiSelected.add(item.id);
+      renderMultiSelectHighlights(); updateMultiselectBar();
+      return; /* don't start drag */
     }
+
+    dragging=true; hasMoved=false;
+    mouseStart={x:e.clientX,y:e.clientY};
+    dragWorldStart = item.folderId ? folderRelToWorld(item) : {x:item.wx,y:item.wy};
     el.setPointerCapture(e.pointerId);
+
+    /* Snapshot positions of all co-selected items (for multi-drag) */
+    multiDragStarts = [];
+    if (multiSelected.has(item.id) && multiSelected.size > 1) {
+      multiSelected.forEach(id => {
+        if (id === item.id) return;
+        const other = inventory.find(i => i.id === id);
+        if (other && !other.folderId) {
+          multiDragStarts.push({ item: other, sx: other.wx, sy: other.wy });
+        }
+      });
+    }
   });
 
   el.addEventListener('pointermove', e => {
     if (!dragging) return;
-    const dx = (e.clientX - mouseStart.x) / view.scale;
-    const dy = (e.clientY - mouseStart.y) / view.scale;
-    if (!hasMoved && Math.hypot(dx, dy) < 5) return;
-
+    const dx=(e.clientX-mouseStart.x)/view.scale, dy=(e.clientY-mouseStart.y)/view.scale;
+    if (!hasMoved&&Math.hypot(dx,dy)<5) return;
     if (!hasMoved) {
-      hasMoved = true;
-      el.classList.add('dragging');
-      if (item.folderId) {
-        el.style.left = dragWorldStart.x + 'px';
-        el.style.top  = dragWorldStart.y + 'px';
-        world.appendChild(el);
-      }
+      hasMoved=true; el.classList.add('dragging');
+      if (item.folderId) { el.style.left=dragWorldStart.x+'px'; el.style.top=dragWorldStart.y+'px'; world.appendChild(el); }
     }
+    const wx=dragWorldStart.x+dx, wy=dragWorldStart.y+dy;
+    el.style.left=wx+'px'; el.style.top=wy+'px';
+    if (!item.folderId) { item.wx=wx; item.wy=wy; }
+    item._dragWx=wx; item._dragWy=wy; item._dragging=true;
 
-    const wx = dragWorldStart.x + dx;
-    const wy = dragWorldStart.y + dy;
-    el.style.left = wx + 'px';
-    el.style.top  = wy + 'px';
+    /* Move co-selected items */
+    multiDragStarts.forEach(({item:other, sx, sy}) => {
+      other.wx=sx+dx; other.wy=sy+dy;
+      const otherEl=world.querySelector(`[data-id="${other.id}"]`);
+      if (otherEl) { otherEl.style.left=other.wx+'px'; otherEl.style.top=other.wy+'px'; }
+    });
 
-    // Update item's world position live so rope math is correct
-    if (!item.folderId) {
-      item.wx = wx; item.wy = wy;
-    }
-    // For foldered items temporarily in world during drag, use wx/wy as world pos
-    // We store temp world pos into item so itemWorldCenter works during drag
-    item._dragWx = wx; item._dragWy = wy; item._dragging = true;
-
-    // Live rope update
     updateAllRopePaths();
 
-    const cx = wx + 40, cy = wy + 36;
+    const cx=wx+40,cy=wy+36;
+    if (mergeTargetId) { const prev=world.querySelector(`[data-id="${mergeTargetId}"]`); if (prev) prev.classList.remove('merge-target'); mergeTargetId=null; }
 
-    // Merge highlight
-    if (mergeTargetId) {
-      const prev = world.querySelector(`[data-id="${mergeTargetId}"]`);
-      if (prev) prev.classList.remove('merge-target');
-      mergeTargetId = null;
-    }
-    const candidate = findMergeCandidate(item, cx, cy);
-    if (candidate) {
-      mergeTargetId = candidate.id;
-      const cEl = world.querySelector(`[data-id="${candidate.id}"]`);
-      if (cEl) cEl.classList.add('merge-target');
+    /* Only allow merge if NOT doing multi-drag */
+    if (!multiDragStarts.length) {
+      const candidate=findMergeCandidate(item,cx,cy);
+      if (candidate) { mergeTargetId=candidate.id; const cEl=world.querySelector(`[data-id="${candidate.id}"]`); if (cEl) cEl.classList.add('merge-target'); }
     }
 
-    // Folder hover highlight
     folders.forEach(f => {
-      const fEl = world.querySelector(`.inv-folder[data-fid="${f.id}"]`);
+      const fEl=world.querySelector(`.inv-folder[data-fid="${f.id}"]`);
       if (!fEl) return;
-      const inside = inFolderBody(cx, cy, f);
-      fEl.classList.toggle('drag-over-folder', inside && item.folderId !== f.id);
+      fEl.classList.toggle('drag-over-folder', inFolderBody(cx,cy,f)&&item.folderId!==f.id&&!multiDragStarts.length);
     });
   });
 
   el.addEventListener('pointerup', e => {
     if (!dragging) return;
-    dragging = false;
-    el.classList.remove('dragging');
-    item._dragging = false;
-    world.querySelectorAll('.inv-folder').forEach(f => f.classList.remove('drag-over-folder'));
+    dragging=false; el.classList.remove('dragging');
+    item._dragging=false;
+    world.querySelectorAll('.inv-folder').forEach(f=>f.classList.remove('drag-over-folder'));
 
-    if (!hasMoved) {
-      // Hover highlights for connecting mode
-      if (connectingFromId && item.id !== connectingFromId) return;
-      openCtxMenu(item.id, e.clientX, e.clientY);
+    if (!hasMoved) { openCtxMenu(item.id, e.clientX, e.clientY); return; }
+
+    const curWx=parseFloat(el.style.left), curWy=parseFloat(el.style.top);
+    const cx=curWx+40, cy=curWy+36;
+    const prevFolderId=item.folderId;
+
+    /* Multi-drag end: just save */
+    if (multiDragStarts.length) {
+      if (!item.folderId) { item.wx=curWx; item.wy=curWy; }
+      save(); renderAll(); if (selectedId===item.id) selectItem(item.id);
       return;
     }
 
-    const curWx = parseFloat(el.style.left);
-    const curWy = parseFloat(el.style.top);
-    const cx = curWx + 40, cy = curWy + 36;
-    const prevFolderId = item.folderId;
-
-    /* ── 1. Merge ── */
+    /* 1. Merge */
     if (mergeTargetId) {
-      const target = inventory.find(i => i.id === mergeTargetId);
+      const target=inventory.find(i=>i.id===mergeTargetId);
       if (target) {
-        target.qty += item.qty;
-        const tEl = world.querySelector(`[data-id="${target.id}"]`);
-        if (tEl) {
-          tEl.classList.remove('merge-target');
-          tEl.classList.add('merge-flash');
-          tEl.addEventListener('animationend', () => tEl.classList.remove('merge-flash'), { once: true });
-        }
-        inventory = inventory.filter(i => i.id !== item.id);
+        target.qty+=item.qty;
+        const tEl=world.querySelector(`[data-id="${target.id}"]`);
+        if (tEl) { tEl.classList.remove('merge-target'); tEl.classList.add('merge-flash'); tEl.addEventListener('animationend',()=>tEl.classList.remove('merge-flash'),{once:true}); }
+        inventory=inventory.filter(i=>i.id!==item.id);
         removeRopesForItem(item.id);
-        if (selectedId === item.id) { selectedId = null; hideControls(); }
+        if (selectedId===item.id){selectedId=null;hideControls();}
         toast(`⚗ Merged into "${target.name}" (×${target.qty})`);
         save(); renderAll(); return;
       }
     }
 
-    /* ── 2. Drop into a folder ── */
-    const hitFolder = folders.find(f => f.id !== item.folderId && inFolderBody(cx, cy, f));
+    /* 2. Drop into folder */
+    const hitFolder=folders.find(f=>f.id!==item.folderId&&inFolderBody(cx,cy,f));
     if (hitFolder) {
-      item.folderId = hitFolder.id;
-      item.wx = Math.max(0, curWx - hitFolder.wx);
-      item.wy = Math.max(0, curWy - hitFolder.wy - FOLDER_HEADER_H);
-      if (prevFolderId !== hitFolder.id) breakRopesOnContextChange(item.id);
+      item.folderId=hitFolder.id;
+      item.wx=Math.max(0,curWx-hitFolder.wx);
+      item.wy=Math.max(0,curWy-hitFolder.wy-FOLDER_HEADER_H);
+      if (prevFolderId!==hitFolder.id) breakRopesOnContextChange(item.id);
       toast(`📁 "${item.name}" added to "${hitFolder.name}"`);
-      save(); renderAll();
-      if (selectedId === item.id) selectItem(item.id);
-      return;
+      save(); renderAll(); if (selectedId===item.id) selectItem(item.id); return;
     }
 
-    /* ── 3. Eject from folder ── */
+    /* 3. Eject from folder */
     if (item.folderId) {
-      const ownFolder = folders.find(f => f.id === item.folderId);
-      if (ownFolder && !inFolderBody(cx, cy, ownFolder)) {
-        item.folderId = null;
-        item.wx = curWx; item.wy = curWy;
+      const ownFolder=folders.find(f=>f.id===item.folderId);
+      if (ownFolder&&!inFolderBody(cx,cy,ownFolder)) {
+        item.folderId=null; item.wx=curWx; item.wy=curWy;
         breakRopesOnContextChange(item.id);
         toast(`📤 "${item.name}" removed from folder`);
-        save(); renderAll();
-        if (selectedId === item.id) selectItem(item.id);
-        return;
+        save(); renderAll(); if (selectedId===item.id) selectItem(item.id); return;
       }
     }
 
-    /* ── 4. Normal move ── */
+    /* 4. Normal move */
     if (item.folderId) {
-      const ownFolder = folders.find(f => f.id === item.folderId);
-      if (ownFolder) {
-        item.wx = Math.max(0, curWx - ownFolder.wx);
-        item.wy = Math.max(0, curWy - ownFolder.wy - FOLDER_HEADER_H);
-      }
-    } else {
-      item.wx = curWx; item.wy = curWy;
-    }
-    save(); renderAll();
-    if (selectedId === item.id) selectItem(item.id);
+      const ownFolder=folders.find(f=>f.id===item.folderId);
+      if (ownFolder) { item.wx=Math.max(0,curWx-ownFolder.wx); item.wy=Math.max(0,curWy-ownFolder.wy-FOLDER_HEADER_H); }
+    } else { item.wx=curWx; item.wy=curWy; }
+    save(); renderAll(); if (selectedId===item.id) selectItem(item.id);
   });
 
-  /* Hover glow during connect mode */
-  el.addEventListener('pointerenter', () => {
-    if (connectingFromId && item.id !== connectingFromId)
-      el.classList.add('connect-hover');
-  });
+  el.addEventListener('pointerenter', () => { if (connectingFromId&&item.id!==connectingFromId) el.classList.add('connect-hover'); });
   el.addEventListener('pointerleave', () => el.classList.remove('connect-hover'));
-
   return el;
 }
 
-/* Override itemWorldCenter to use live drag position */
-const _origItemWorldCenter = itemWorldCenter;
-function itemWorldCenter(item) {
-  if (item._dragging && item._dragWx !== undefined) {
-    return { x: item._dragWx + 40, y: item._dragWy + 36 };
-  }
-  if (item.folderId) {
-    const w = folderRelToWorld(item);
-    return { x: w.x + 40, y: w.y + 36 };
-  }
-  return { x: item.wx + 40, y: item.wy + 36 };
-}
-
-/* ── Find merge candidate ── */
 function findMergeCandidate(dragged, worldCx, worldCy) {
   return inventory.find(other => {
-    if (other.id === dragged.id) return false;
-    if (other.name.trim().toLowerCase() !== dragged.name.trim().toLowerCase()) return false;
-    const c = itemWorldCenter(other);
-    return Math.hypot(worldCx - c.x, worldCy - c.y) < MERGE_DIST;
+    if (other.id===dragged.id) return false;
+    if (other.name.trim().toLowerCase()!==dragged.name.trim().toLowerCase()) return false;
+    const c=itemWorldCenter(other);
+    return Math.hypot(worldCx-c.x, worldCy-c.y)<MERGE_DIST;
   });
 }
 
@@ -1244,100 +1552,58 @@ function findMergeCandidate(dragged, worldCx, worldCy) {
    CONTEXT MENU
 ================================================================ */
 function openCtxMenu(id, screenX, screenY) {
-  ctxTargetId = id;
-  const item = inventory.find(i => i.id === id);
-  if (!item) return;
+  ctxTargetId=id;
+  const item=inventory.find(i=>i.id===id); if (!item) return;
   selectItem(id);
-  document.getElementById('ctxTitle').textContent = item.name;
-  const takeOneBtn = document.getElementById('ctxTakeOne');
-  takeOneBtn.disabled = item.qty < 2;
-  takeOneBtn.style.opacity = item.qty < 2 ? '0.4' : '1';
-  ctxEjectBtn.style.display = item.folderId ? 'block' : 'none';
-  const vr = viewport.getBoundingClientRect();
-  const menuW = 160, menuH = 220;
-  const left = Math.min(screenX - vr.left + 12, vr.width  - menuW - 8);
-  const top  = Math.min(screenY - vr.top  - 20, vr.height - menuH - 90);
-  ctxMenu.style.left = left + 'px';
-  ctxMenu.style.top  = top  + 'px';
+  document.getElementById('ctxTitle').textContent=item.name;
+  const takeOneBtn=document.getElementById('ctxTakeOne');
+  takeOneBtn.disabled=item.qty<2; takeOneBtn.style.opacity=item.qty<2?'0.4':'1';
+  ctxEjectBtn.style.display=item.folderId?'block':'none';
+  const vr=viewport.getBoundingClientRect();
+  const menuW=160,menuH=220;
+  const left=Math.min(screenX-vr.left+12,vr.width-menuW-8);
+  const top=Math.min(screenY-vr.top-20,vr.height-menuH-90);
+  ctxMenu.style.left=left+'px'; ctxMenu.style.top=top+'px';
   ctxMenu.classList.add('open');
 }
-
-function closeCtxMenu() { ctxMenu.classList.remove('open'); ctxTargetId = null; }
-
-viewport.addEventListener('pointerdown', e => {
-  if (!ctxMenu.contains(e.target)) closeCtxMenu();
-}, true);
+function closeCtxMenu() { ctxMenu.classList.remove('open'); ctxTargetId=null; }
+viewport.addEventListener('pointerdown', e=>{ if (!ctxMenu.contains(e.target)) closeCtxMenu(); }, true);
 
 document.getElementById('ctxTakeOne').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === ctxTargetId);
-  if (!item || item.qty < 2) return;
+  const item=inventory.find(i=>i.id===ctxTargetId); if (!item||item.qty<2) return;
   item.qty--;
-  const offset = 90 + Math.random() * 40, angle = Math.random() * Math.PI * 2;
-  const w = folderRelToWorld(item);
-  const single = {
-    id: uid(), name: item.name, src: item.src, qty: 1,
-    wx: w.x + Math.cos(angle) * offset,
-    wy: w.y + Math.sin(angle) * offset, folderId: null,
-  };
-  inventory.push(single);
-  closeCtxMenu(); save(); renderAll(); selectItem(single.id);
-  toast(`☝ Took 1 × ${item.name}`);
+  const offset=90+Math.random()*40, angle=Math.random()*Math.PI*2, w=folderRelToWorld(item);
+  inventory.push({id:uid(),name:item.name,src:item.src,qty:1,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null});
+  closeCtxMenu(); save(); renderAll(); toast(`☝ Took 1 × ${item.name}`);
 });
 
 document.getElementById('ctxClone').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === ctxTargetId);
-  if (!item) return;
-  const offset = 100 + Math.random() * 40, angle = Math.random() * Math.PI * 2;
-  const w = folderRelToWorld(item);
-  const clone = {
-    id: uid(), name: item.name, src: item.src, qty: item.qty,
-    wx: w.x + Math.cos(angle) * offset,
-    wy: w.y + Math.sin(angle) * offset, folderId: null,
-  };
-  inventory.push(clone);
-  closeCtxMenu(); save(); renderAll(); selectItem(clone.id);
+  const item=inventory.find(i=>i.id===ctxTargetId); if (!item) return;
+  const offset=100+Math.random()*40, angle=Math.random()*Math.PI*2, w=folderRelToWorld(item);
+  const clone={id:uid(),name:item.name,src:item.src,qty:item.qty,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null};
+  inventory.push(clone); closeCtxMenu(); save(); renderAll(); selectItem(clone.id);
   toast(`⎘ Cloned "${item.name}"`);
 });
 
 document.getElementById('ctxRename').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === ctxTargetId);
-  if (!item) return;
-  closeCtxMenu();
-  const el = world.querySelector(`[data-id="${item.id}"]`);
-  const nameDiv = el.querySelector('.item-name');
-  const input = document.createElement('input');
-  input.type = 'text'; input.className = 'rename-input';
-  input.value = item.name; input.maxLength = 40;
+  const item=inventory.find(i=>i.id===ctxTargetId); if (!item) return; closeCtxMenu();
+  const el=world.querySelector(`[data-id="${item.id}"]`);
+  const nameDiv=el.querySelector('.item-name');
+  const input=document.createElement('input'); input.type='text'; input.className='rename-input'; input.value=item.name; input.maxLength=40;
   nameDiv.replaceWith(input); input.focus(); input.select();
-  function commitRename() {
-    const newName = input.value.trim() || item.name;
-    if (newName !== item.name && nameExists(newName, item.id)) {
-      toast('⚠ An item with that name already exists!', true);
-    } else {
-      item.name = newName; toast(`✎ Renamed to "${item.name}"`);
-    }
-    save(); renderAll(); selectItem(item.id);
-  }
-  input.addEventListener('blur', commitRename, { once: true });
-  input.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
-    if (ev.key === 'Escape') { input.value = item.name; input.blur(); }
-  });
+  function commitRename() { const newName=input.value.trim()||item.name; item.name=newName; save(); renderAll(); selectItem(item.id); toast(`✎ Renamed to "${item.name}"`); }
+  input.addEventListener('blur',commitRename,{once:true});
+  input.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();input.blur();}if(ev.key==='Escape'){input.value=item.name;input.blur();}});
 });
 
-/* ── Connect button in context menu ── */
 document.getElementById('ctxConnect').addEventListener('click', () => {
-  const id = ctxTargetId;
-  closeCtxMenu();
-  startConnect(id);
-  toast('🔗 Click another item to connect with rope');
+  const id=ctxTargetId; closeCtxMenu(); startConnect(id); toast('🔗 Click another item to connect with rope');
 });
 
 ctxEjectBtn.addEventListener('click', () => { ejectFromFolder(ctxTargetId); closeCtxMenu(); });
 
 document.getElementById('ctxRemove').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === ctxTargetId);
-  if (!item) return;
+  const item=inventory.find(i=>i.id===ctxTargetId); if (!item) return;
   if (!confirm(`Remove "${item.name}"?`)) return;
   removeItem(item.id); closeCtxMenu();
 });
@@ -1346,97 +1612,86 @@ document.getElementById('ctxRemove').addEventListener('click', () => {
    SELECTION & BOTTOM PANEL
 ================================================================ */
 function selectItem(id) {
-  if (selectedId) {
-    const prev = world.querySelector(`[data-id="${selectedId}"]`);
-    if (prev) prev.classList.remove('selected');
-  }
-  selectedId = id;
-  const item = inventory.find(i => i.id === id);
-  if (!item) return;
-  const el = world.querySelector(`[data-id="${id}"]`);
-  if (el) el.classList.add('selected');
-  ctrlName.childNodes[0].textContent = item.name;
-  ctrlSub.textContent = 'selected';
-  ctrlQty.textContent = item.qty;
-  ctrlEject.style.display = item.folderId ? 'flex' : 'none';
+  if (selectedId) { const prev=world.querySelector(`[data-id="${selectedId}"]`); if (prev) prev.classList.remove('selected'); }
+  selectedId=id;
+  const item=inventory.find(i=>i.id===id); if (!item) return;
+  const el=world.querySelector(`[data-id="${id}"]`); if (el) el.classList.add('selected');
+  ctrlName.childNodes[0].textContent=item.name;
+  ctrlSub.textContent='selected';
+  ctrlQty.textContent=item.qty;
+  ctrlEject.style.display=item.folderId?'flex':'none';
+  /* Weight & Gold — show stack totals */
+  const totalW = ((item.weight||0) * item.qty).toFixed(1);
+  const totalG = ((item.gold||0)   * item.qty).toFixed(0);
+  ctrlWeight.textContent = `${totalW} kg${item.qty>1?' ('+item.weight+'×'+item.qty+')':''}`;
+  ctrlGold.textContent   = `${totalG} gp${item.qty>1?' ('+item.gold+'×'+item.qty+')':''}`;
   itemControls.classList.add('visible');
 }
-
 function deselectItem() {
-  if (selectedId) {
-    const el = world.querySelector(`[data-id="${selectedId}"]`);
-    if (el) el.classList.remove('selected');
-  }
-  selectedId = null; hideControls();
+  if (selectedId) { const el=world.querySelector(`[data-id="${selectedId}"]`); if (el) el.classList.remove('selected'); }
+  selectedId=null; hideControls();
 }
-
 function hideControls() { itemControls.classList.remove('visible'); }
 
 document.getElementById('ctrlPlus').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === selectedId); if (!item) return;
+  const item=inventory.find(i=>i.id===selectedId); if (!item) return;
   item.qty++;
-  ctrlQty.textContent = item.qty;
-  const badge = world.querySelector(`[data-id="${selectedId}"] .item-qty`);
-  if (badge) badge.textContent = item.qty > 1 ? item.qty : '';
+  ctrlQty.textContent=item.qty;
+  const badge=world.querySelector(`[data-id="${selectedId}"] .item-qty`);
+  if (badge) badge.textContent=item.qty>1?item.qty:'';
+  /* Update stats */
+  ctrlWeight.textContent=`${((item.weight||0)*item.qty).toFixed(1)} kg${item.qty>1?' ('+item.weight+'×'+item.qty+')':''}`;
+  ctrlGold.textContent=`${((item.gold||0)*item.qty).toFixed(0)} gp${item.qty>1?' ('+item.gold+'×'+item.qty+')':''}`;
   save(); updateCount();
 });
-
 document.getElementById('ctrlMinus').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === selectedId); if (!item) return;
-  if (item.qty > 1) {
+  const item=inventory.find(i=>i.id===selectedId); if (!item) return;
+  if (item.qty>1) {
     item.qty--;
-    ctrlQty.textContent = item.qty;
-    const badge = world.querySelector(`[data-id="${selectedId}"] .item-qty`);
-    if (badge) badge.textContent = item.qty > 1 ? item.qty : '';
+    ctrlQty.textContent=item.qty;
+    const badge=world.querySelector(`[data-id="${selectedId}"] .item-qty`);
+    if (badge) badge.textContent=item.qty>1?item.qty:'';
+    ctrlWeight.textContent=`${((item.weight||0)*item.qty).toFixed(1)} kg${item.qty>1?' ('+item.weight+'×'+item.qty+')':''}`;
+    ctrlGold.textContent=`${((item.gold||0)*item.qty).toFixed(0)} gp${item.qty>1?' ('+item.gold+'×'+item.qty+')':''}`;
     save(); updateCount();
-  } else {
-    if (confirm(`Remove "${item.name}"?`)) removeItem(item.id);
-  }
+  } else { if (confirm(`Remove "${item.name}"?`)) removeItem(item.id); }
 });
-
 document.getElementById('ctrlRemove').addEventListener('click', () => {
-  const item = inventory.find(i => i.id === selectedId);
-  if (item && confirm(`Remove "${item.name}"?`)) removeItem(item.id);
+  const item=inventory.find(i=>i.id===selectedId);
+  if (item&&confirm(`Remove "${item.name}"?`)) removeItem(item.id);
 });
-
 ctrlEject.addEventListener('click', () => ejectFromFolder(selectedId));
 
 function ejectFromFolder(id) {
-  const item = inventory.find(i => i.id === id);
-  if (!item || !item.folderId) return;
-  const folder = folders.find(f => f.id === item.folderId);
-  item.folderId = null;
-  item.wx = folder ? folder.wx + folder.w + 20 : item.wx;
-  item.wy = folder ? folder.wy + 40 : item.wy;
+  const item=inventory.find(i=>i.id===id); if (!item||!item.folderId) return;
+  const folder=folders.find(f=>f.id===item.folderId);
+  item.folderId=null;
+  item.wx=folder?folder.wx+folder.w+20:item.wx;
+  item.wy=folder?folder.wy+40:item.wy;
   breakRopesOnContextChange(id);
   save(); renderAll(); selectItem(id);
   toast(`📤 "${item.name}" removed from folder`);
 }
 
 function removeItem(id) {
-  const item = inventory.find(i => i.id === id);
-  const name = item ? item.name : 'Item';
-  inventory = inventory.filter(i => i.id !== id);
+  const item=inventory.find(i=>i.id===id);
+  const name=item?item.name:'Item';
+  inventory=inventory.filter(i=>i.id!==id);
+  multiSelected.delete(id); updateMultiselectBar();
   removeRopesForItem(id);
-  if (selectedId === id) { selectedId = null; hideControls(); }
-  save(); renderAll();
-  toast(`✕ "${name}" removed.`);
+  if (selectedId===id){selectedId=null;hideControls();}
+  save(); renderAll(); toast(`✕ "${name}" removed.`);
 }
 
 /* ================================================================
    INIT
 ================================================================ */
 load();
-
 requestAnimationFrame(() => {
-  const vr = viewport.getBoundingClientRect();
-  if (view.x === 0 && view.y === 0 && view.scale === 1) {
-    view.x = vr.width  / 2 - WORLD_W / 2;
-    view.y = vr.height / 2 - WORLD_H / 2;
-  }
+  const vr=viewport.getBoundingClientRect();
+  if (view.x===0&&view.y===0&&view.scale===1) { view.x=vr.width/2-WORLD_W/2; view.y=vr.height/2-WORLD_H/2; }
   applyView();
 });
-
 renderAll();
 </script>
 </body>
