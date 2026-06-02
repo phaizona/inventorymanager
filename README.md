@@ -14,7 +14,7 @@ Users can freely place items, create characters, manage equipment, design crafti
 
 Play the browser demo here:
 
-https://phaizona.github.io/inventorymanager/
+https://phaizona.github.io/theadventurerssatchel/
 
 > ⚠ This is a demo version of the project.
 >
