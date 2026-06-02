@@ -64,6 +64,35 @@ let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
 
 let pendingCraftHint = null;
 
+/* ── Smooth arrow-key pan ── */
+const arrowKeys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
+let arrowAnimId = null;
+const ARROW_PAN_SPEED = 8; // pixels per frame at scale 1
+
+/* ================================================================
+   IMAGE COMPRESSION UTILITY
+================================================================ */
+function compressImage(dataUrl, maxSize = 256, quality = 0.72) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else       { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      canvas.width  = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/webp', quality));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback unchanged
+    img.src = dataUrl;
+  });
+}
+
 /* ================================================================
    DOM REFS
 ================================================================ */
@@ -199,8 +228,17 @@ function playerTotalGoldFromItems(playerId) {
    PERSISTENCE
 ================================================================ */
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ library, inventory, folders, players, ropes, recipes, view })); }
-  catch (_) { toast('⚠ Storage full — export to back up!', true); }
+  try {
+    const data = JSON.stringify({ library, inventory, folders, players, ropes, recipes, view });
+    localStorage.setItem(STORAGE_KEY, data);
+  } catch (e) {
+    // Storage full – silently ignore, don't spam toasts
+    // Only warn once per session
+    if (!save._warned) {
+      save._warned = true;
+      toast('⚠ Storage nearly full — export to back up!', true);
+    }
+  }
 }
 
 function load() {
@@ -234,10 +272,12 @@ function load() {
 ================================================================ */
 document.getElementById('exportBtn').addEventListener('click', () => {
   if(!inventory.length&&!folders.length&&!players.length&&!library.length){toast('Nothing to export!');return;}
-  const blob=new Blob([JSON.stringify({library,inventory,folders,players,ropes,recipes,view},null,2)],{type:'application/json'});
+  const exportData = { library, inventory, folders, players, ropes, recipes, view };
+  const blob=new Blob([JSON.stringify(exportData, null, 2)],{type:'application/json'});
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'fantasy_inventory.json'});
   a.click();URL.revokeObjectURL(a.href);toast('⬇ Exported!');
 });
+
 document.getElementById('importBtn').addEventListener('click', ()=>importInput.click());
 importInput.addEventListener('change', e => {
   const file=e.target.files[0];if(!file)return;
@@ -245,18 +285,30 @@ importInput.addEventListener('change', e => {
   reader.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      if(Array.isArray(data)){inventory=data;folders=[];players=[];ropes=[];library=[];recipes=[];const seen=new Set();inventory.forEach(it=>{const k=it.name.trim().toLowerCase();if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0});}});}
-      else if(data.inventory){inventory=data.inventory;folders=data.folders||[];players=data.players||[];ropes=data.ropes||[];library=data.library||[];recipes=data.recipes||[];if(data.view)view=data.view;}
-      else throw new Error();
+      if(Array.isArray(data)){
+        inventory=data;folders=[];players=[];ropes=[];library=[];recipes=[];
+        const seen=new Set();
+        inventory.forEach(it=>{const k=it.name.trim().toLowerCase();if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0});}});
+      } else if(data.inventory){
+        inventory=data.inventory||[];
+        folders=data.folders||[];
+        players=data.players||[];
+        ropes=data.ropes||[];
+        library=data.library||[];
+        recipes=data.recipes||[];
+        if(data.view) view=data.view;
+      } else throw new Error('Unknown format');
       library.forEach(l=>{if(l.gold===undefined)l.gold=0;});
       inventory.forEach(i=>{if(i.gold===undefined)i.gold=0;if(i.playerId===undefined)i.playerId=null;});
       players.forEach(p=>{if(p.maxWeight===undefined)p.maxWeight=50;if(p.gold===undefined)p.gold=100;if(p.avatar===undefined)p.avatar='🧙';if(p.w===undefined)p.w=300;if(p.h===undefined)p.h=220;});
+      save._warned = false;
       save();renderAll();renderLibrary();renderPlayersSidebar();renderRecipes();applyView();toast('⬆ Inventory imported!');
     }catch(_){toast('✕ Invalid file.',true);}
     importInput.value='';
   };
   reader.readAsText(file);
 });
+
 document.getElementById('clearBtn').addEventListener('click', () => {
   if(!inventory.length&&!folders.length&&!players.length){toast('Already empty!');return;}
   showCanvasConfirm('Clear entire canvas?<br/><em>Library & recipes kept.</em>', viewport.getBoundingClientRect().width/2-100, viewport.getBoundingClientRect().height/2-50, () => {
@@ -366,7 +418,7 @@ function openFolderCreateConfirm() {
   });
 }
 
-/* ── PAN: right click + middle click + arrow keys ── */
+/* ── PAN: right click + middle click ── */
 viewport.addEventListener('contextmenu', e => { e.preventDefault(); });
 
 viewport.addEventListener('pointerdown', e => {
@@ -457,16 +509,44 @@ viewport.addEventListener('pointerup', e => {
   }
 });
 
-/* Arrow key panning */
-const ARROW_PAN = 40;
+/* ── Arrow key smooth panning ── */
+function startArrowPan() {
+  if (arrowAnimId) return;
+  function tick() {
+    let moved = false;
+    if (arrowKeys.ArrowLeft)  { view.x += ARROW_PAN_SPEED; moved = true; }
+    if (arrowKeys.ArrowRight) { view.x -= ARROW_PAN_SPEED; moved = true; }
+    if (arrowKeys.ArrowUp)    { view.y += ARROW_PAN_SPEED; moved = true; }
+    if (arrowKeys.ArrowDown)  { view.y -= ARROW_PAN_SPEED; moved = true; }
+    if (moved) applyView();
+    if (arrowKeys.ArrowLeft || arrowKeys.ArrowRight || arrowKeys.ArrowUp || arrowKeys.ArrowDown) {
+      arrowAnimId = requestAnimationFrame(tick);
+    } else {
+      arrowAnimId = null;
+      save();
+    }
+  }
+  arrowAnimId = requestAnimationFrame(tick);
+}
+
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key in arrowKeys) {
+    e.preventDefault();
+    if (!arrowKeys[e.key]) {
+      arrowKeys[e.key] = true;
+      startArrowPan();
+    }
+    return;
+  }
   switch(e.key) {
-    case 'ArrowLeft':  e.preventDefault(); view.x += ARROW_PAN; applyView(); break;
-    case 'ArrowRight': e.preventDefault(); view.x -= ARROW_PAN; applyView(); break;
-    case 'ArrowUp':    e.preventDefault(); view.y += ARROW_PAN; applyView(); break;
-    case 'ArrowDown':  e.preventDefault(); view.y -= ARROW_PAN; applyView(); break;
     case 'Escape': cancelConnect(); dismissCraftHint(); closeCanvasConfirm(); break;
+  }
+});
+
+document.addEventListener('keyup', e => {
+  if (e.key in arrowKeys) {
+    arrowKeys[e.key] = false;
   }
 });
 
@@ -518,7 +598,20 @@ fileInput.addEventListener('change', e=>{if(e.target.files[0])readImg(e.target.f
 uploadZone.addEventListener('dragover', e=>{e.preventDefault();uploadZone.classList.add('drag-over');});
 uploadZone.addEventListener('dragleave', ()=>uploadZone.classList.remove('drag-over'));
 uploadZone.addEventListener('drop', e=>{e.preventDefault();uploadZone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))readImg(f);});
-function readImg(file) { const r=new FileReader();r.onload=ev=>{pendingImg=ev.target.result;previewImg.src=pendingImg;previewImg.style.display='block';placeholder.style.display='none';checkReady();};r.readAsDataURL(file); }
+
+function readImg(file) {
+  const r = new FileReader();
+  r.onload = async ev => {
+    const compressed = await compressImage(ev.target.result, 256, 0.75);
+    pendingImg = compressed;
+    previewImg.src = pendingImg;
+    previewImg.style.display = 'block';
+    placeholder.style.display = 'none';
+    checkReady();
+  };
+  r.readAsDataURL(file);
+}
+
 function checkReady() { const name=itemNameEl.value.trim();const exists=name&&libNameExists(name);nameWarn.classList.toggle('visible',!!exists);itemNameEl.classList.toggle('error',!!exists);addBtn.disabled=!(pendingImg&&name&&!exists); }
 itemNameEl.addEventListener('input', checkReady);
 nameWarnLink.addEventListener('click', ()=>switchToLibrary());
@@ -618,6 +711,8 @@ function renderPlayersSidebar() {
   playerListEmpty.style.display='none';
   players.forEach(p=>{
     const tw=playerTotalWeight(p.id);const tg=playerTotalGoldFromItems(p.id);const netWorth=tg+(p.gold||0);
+    // FIX: count total qty, not just item types
+    const totalQty = inventory.filter(i=>i.playerId===p.id).reduce((s,i)=>s+i.qty,0);
     const div=document.createElement('div');
     div.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(10,25,55,0.45);border:1px solid rgba(58,111,168,0.35);border-radius:5px;cursor:pointer;transition:background 0.14s;';
     div.innerHTML=`<span style="font-size:18px;flex-shrink:0;">${p.avatar}</span><div style="flex:1;min-width:0;"><div style="font-family:var(--font-heading);font-size:11px;color:var(--player-accent-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div><div style="font-family:var(--font-body);font-size:10px;color:var(--parchment-dark);font-style:italic;">⚖ ${tw.toFixed(1)}/${p.maxWeight}kg · 🪙 ${netWorth.toFixed(0)}gp</div></div>`;
@@ -812,36 +907,79 @@ document.getElementById('craftBtn').addEventListener('click', ()=>{
 function executeCraft(aLibId, bLibId, resultLibId) {
   const ea = getLibEntry(aLibId), eb = getLibEntry(bLibId), er = getLibEntry(resultLibId);
   if(!ea||!eb||!er) { toast('⚠ Library entries missing',true); return; }
-  const itemA = inventory.find(i=>i.name.trim().toLowerCase()===ea.name.trim().toLowerCase()&&i.qty>=1);
-  const itemB = aLibId===bLibId
-    ? inventory.filter(i=>i.name.trim().toLowerCase()===ea.name.trim().toLowerCase()&&i.qty>=1)[1] || itemA
-    : inventory.find(i=>i.name.trim().toLowerCase()===eb.name.trim().toLowerCase()&&i.qty>=1);
-  if(!itemA) { toast(`⚠ Need "${ea.name}" on canvas`,true); return; }
-  if(!itemB||itemB===itemA&&aLibId!==bLibId) { toast(`⚠ Need "${eb.name}" on canvas`,true); return; }
-  if(itemA===itemB&&aLibId===bLibId) {
-    if(itemA.qty<2){toast(`⚠ Need at least 2 × "${ea.name}"`,true);return;}
+
+  // Find ingredient items on canvas
+  const sameIngredient = (aLibId === bLibId);
+
+  // Find all matching canvas items for ingredient A
+  const aMatches = inventory.filter(i =>
+    i.name.trim().toLowerCase() === ea.name.trim().toLowerCase() && i.qty >= 1
+  );
+  // Find all matching canvas items for ingredient B
+  const bMatches = inventory.filter(i =>
+    i.name.trim().toLowerCase() === eb.name.trim().toLowerCase() && i.qty >= 1
+  );
+
+  if (!aMatches.length) { toast(`⚠ Need "${ea.name}" on canvas`, true); return; }
+
+  let itemA, itemB;
+
+  if (sameIngredient) {
+    // Need 2 of same item — either one stack with qty>=2 or two stacks
+    const stackOf2 = aMatches.find(i => i.qty >= 2);
+    if (stackOf2) {
+      itemA = stackOf2;
+      itemB = stackOf2; // same stack
+    } else if (aMatches.length >= 2) {
+      itemA = aMatches[0];
+      itemB = aMatches[1]; // two different stacks
+    } else {
+      toast(`⚠ Need at least 2 × "${ea.name}"`, true); return;
+    }
+  } else {
+    itemA = aMatches[0];
+    if (!bMatches.length) { toast(`⚠ Need "${eb.name}" on canvas`, true); return; }
+    itemB = bMatches[0];
   }
-  if(itemA===itemB) {
+
+  // Save spawn position before modifying
+  const spawnPos = containerRelToWorld(itemA);
+
+  // Consume ingredients
+  if (itemA === itemB) {
+    // Same stack, remove 2
     itemA.qty -= 2;
   } else {
     itemA.qty -= 1;
     itemB.qty -= 1;
   }
-  const consumed=[];
-  if(itemA.qty<=0){consumed.push(itemA.id);}
-  if(itemB.qty<=0&&itemB!==itemA){consumed.push(itemB.id);}
-  consumed.forEach(id=>{inventory=inventory.filter(i=>i.id!==id);removeRopesForItem(id);});
 
-  const spawnAt = itemA.qty<=0
-    ? containerRelToWorld(itemA)
-    : { x: itemA.wx + 100 + Math.random()*50, y: itemA.wy };
-  const resultItem={id:uid(),name:er.name,src:er.src,qty:1,rarity:er.rarity,weight:er.weight||0,gold:er.gold||0,wx:spawnAt.x,wy:spawnAt.y,folderId:null,playerId:null};
+  // Remove depleted items
+  const toRemove = [];
+  if (itemA.qty <= 0) toRemove.push(itemA.id);
+  if (itemB !== itemA && itemB.qty <= 0) toRemove.push(itemB.id);
+  toRemove.forEach(id => { inventory = inventory.filter(i => i.id !== id); removeRopesForItem(id); });
+
+  // Place result item on canvas
+  const resultItem = {
+    id: uid(),
+    name: er.name,
+    src: er.src,
+    qty: 1,
+    rarity: er.rarity,
+    weight: er.weight || 0,
+    gold: er.gold || 0,
+    wx: spawnPos.x + 110 + Math.random() * 40,
+    wy: spawnPos.y + (Math.random() - 0.5) * 40,
+    folderId: null,
+    playerId: null
+  };
   inventory.push(resultItem);
-  save();renderAll();refreshAllPlayerStats();
+  save(); renderAll(); refreshAllPlayerStats();
 
-  requestAnimationFrame(()=>{
-    const el=world.querySelector(`[data-id="${resultItem.id}"]`);
-    if(el){el.classList.add('craft-flash');el.addEventListener('animationend',()=>el.classList.remove('craft-flash'),{once:true});}
+  requestAnimationFrame(() => {
+    const el = world.querySelector(`[data-id="${resultItem.id}"]`);
+    if (el) { el.classList.add('craft-flash'); el.addEventListener('animationend', () => el.classList.remove('craft-flash'), { once: true }); }
   });
   toast(`⚗ Crafted "${er.name}"!`);
 }
@@ -953,16 +1091,26 @@ function renderAll() {
     else if(item.playerId){const bodyEl=world.querySelector(`.inv-player[data-pid="${item.playerId}"] .player-body`);if(bodyEl)bodyEl.appendChild(el);else{item.playerId=null;world.appendChild(el);}}
     else world.appendChild(el);
   });
-  folders.forEach(f=>{const cnt=inventory.filter(i=>i.folderId===f.id).length;const label=world.querySelector(`.inv-folder[data-fid="${f.id}"] .folder-count`);if(label)label.textContent=cnt?`${cnt} item${cnt!==1?'s':''}`:'' ;});
+
+  // FIX: Folder item count now sums qty, not just counts items
+  folders.forEach(f=>{
+    const items = inventory.filter(i=>i.folderId===f.id);
+    const totalQty = items.reduce((s,i)=>s+i.qty,0);
+    const label=world.querySelector(`.inv-folder[data-fid="${f.id}"] .folder-count`);
+    if(label) label.textContent = totalQty ? `${totalQty} item${totalQty!==1?'s':''}` : '';
+  });
+
   players.forEach(p=>refreshPlayerStatsEl(p.id));
   emptyMsg.style.display=(!inventory.length&&!folders.length&&!players.length)?'block':'none';
   updateCount();renderRopes();renderMultiSelectHighlights();
   if(selectedId){const el=world.querySelector(`[data-id="${selectedId}"]`);if(el)el.classList.add('selected');}
 }
+
 function updateCount() {
   const total=inventory.reduce((s,i)=>s+i.qty,0);
   itemCount.textContent=inventory.length?`${inventory.length} type${inventory.length>1?'s':''} · ${total} total · ${folders.length} folder${folders.length!==1?'s':''} · ${players.length} player${players.length!==1?'s':''}`:'No items in inventory';
 }
+
 function refreshPlayerStatsEl(playerId) {
   const p=players.find(pl=>pl.id===playerId);if(!p) return;
   const el=world.querySelector(`.inv-player[data-pid="${playerId}"]`);if(!el) return;
@@ -972,7 +1120,12 @@ function refreshPlayerStatsEl(playerId) {
   const weightEl=el.querySelector('.psc-weight');if(weightEl){weightEl.textContent=tw.toFixed(1)+' / '+p.maxWeight+' kg';weightEl.classList.toggle('over-limit',over);weightEl.classList.toggle('near-limit',near&&!over);}
   const goldEl=el.querySelector('.psc-gold');if(goldEl)goldEl.textContent=p.gold.toFixed(0)+' gp';
   const netEl=el.querySelector('.psc-networth');if(netEl)netEl.textContent=netWorth.toFixed(0)+' gp';
-  const cntEl=el.querySelector('.player-item-count');const cnt=inventory.filter(i=>i.playerId===playerId).length;if(cntEl)cntEl.textContent=cnt?`${cnt} item${cnt!==1?'s':''}`:'' ;
+
+  // FIX: Player item count now sums qty, not just counts item stacks
+  const items = inventory.filter(i=>i.playerId===playerId);
+  const totalQty = items.reduce((s,i)=>s+i.qty,0);
+  const cntEl=el.querySelector('.player-item-count');
+  if(cntEl) cntEl.textContent = totalQty ? `${totalQty} item${totalQty!==1?'s':''}` : '';
 }
 function refreshAllPlayerStats(){players.forEach(p=>refreshPlayerStatsEl(p.id));renderPlayersSidebar();}
 
