@@ -1,28 +1,36 @@
-# ⚔ Fantasy Inventory Manager
+# ⚔ The Adventurer's Satchel
 
-A fantasy-themed inventory management application built with vanilla HTML, CSS, and JavaScript.
+A fantasy-themed inventory management sandbox built with vanilla HTML, CSS, and JavaScript.
 
-Designed for RPG players, Dungeon Masters, worldbuilders, writers, and character creators, Fantasy Inventory Manager provides a visual, immersive way to organize items, inventories, characters, and campaign resources.
+**The Adventurer's Satchel** is a browser-based demo and proof of concept for a larger inventory management application currently in development.
 
-Unlike traditional inventory systems, items can be freely placed across an infinite canvas, allowing users to create custom layouts, storage areas, equipment setups, treasure hoards, merchant inventories, and much more.
+Designed for RPG players, Dungeon Masters, worldbuilders, writers, and character creators, the project focuses on creating a visual and immersive inventory experience rather than a traditional grid-based inventory system.
+
+Users can freely place items, create characters, manage equipment, design crafting recipes, and build personalized inventory layouts across an infinite canvas.
 
 ---
 
 ## 🌐 Live Demo
 
-**Try it here:**
+Play the browser demo here:
 
 https://phaizona.github.io/inventorymanager/
 
+> ⚠ This is a demo version of the project.
+>
+> The full version is planned as a standalone desktop application with significantly expanded functionality and long-term support.
+
 ---
 
-# ✨ Features
+# ✨ Current Features
 
-## 🎒 Item Creation & Customization
+## 🎒 Item Forge
+
+Create fully customizable inventory items.
 
 * Upload custom item images
 * Drag & drop image support
-* Custom item names
+* Custom item naming
 * Stack quantities
 * Item cloning
 * Item renaming
@@ -31,9 +39,16 @@ https://phaizona.github.io/inventorymanager/
 
 ---
 
-## 💎 Rarity System
+## 💎 Advanced Item Statistics
 
-Assign rarity levels to every item:
+Every item can store additional gameplay information.
+
+* Item rarity
+* Item weight
+* Item value (gold)
+* Quantity tracking
+
+Available rarity levels:
 
 * Common
 * Uncommon
@@ -42,110 +57,151 @@ Assign rarity levels to every item:
 * Legendary
 * Mythic
 
-Perfect for organizing loot, equipment, collectibles, and campaign rewards.
+---
+
+## 📚 Persistent Item Library
+
+Build your own reusable collection of items.
+
+* Save custom items permanently
+* Edit existing library entries
+* Reuse assets instantly
+* Search your library
+* Persistent local storage
+
+Perfect for recurring characters, campaigns, and worldbuilding projects.
+
+---
+
+## ⚗ Crafting System
+
+Create and save custom crafting recipes.
+
+* Combine existing items
+* Generate new crafted items
+* Save recipes permanently
+* Reuse recipes whenever needed
+
+Ideal for alchemy systems, blacksmithing, magical crafting, and custom game worlds.
+
+---
+
+## 🧙 Character System
+
+Create and manage player characters directly on the canvas.
+
+Features include:
+
+* Custom player names
+* Avatar selection
+* Carry weight limits
+* Personal gold tracking
+* Inventory ownership
+* Individual character management
+
+Perfect for parties, adventuring groups, and tabletop campaigns.
 
 ---
 
 ## 🗺 Infinite Inventory Canvas
 
+Organize inventories visually instead of using restrictive grids.
+
 * Unlimited workspace
 * Free item placement
-* Drag & drop positioning
+* Drag & drop organization
 * Zoom controls
 * Canvas panning
-* Visual organization instead of restrictive grid systems
+* Multi-select support
 
-Create realistic inventories, storage rooms, vaults, backpacks, chests, merchant stands, and more.
+Create:
 
----
-
-## 📚 Item Library System
-
-Build your own reusable item collection.
-
-* Save frequently used items
-* Quickly spawn existing items
-* Reuse assets across multiple inventories
-* Reduce repetitive item creation
-
-Ideal for campaigns, worldbuilding projects, and recurring characters.
+* Backpacks
+* Treasure hoards
+* Storage rooms
+* Chests
+* Equipment layouts
+* Merchant displays
+* Worldbuilding references
 
 ---
 
-## 📁 Folder Organization
+## 🔗 Item Connections
 
-Organize inventories using folders.
+Visually connect related items together.
 
-* Create custom folders
-* Move items between folders
-* Separate equipment, resources, consumables, quest items, treasures, and more
-* Keep large inventories manageable
+Use connections for:
 
----
-
-## 🔗 Item Connection System
-
-Create relationships between items.
-
-* Link related objects together
-* Connect sets, collections, quests, recipes, equipment pieces, or story-related items
-* Visualize item dependencies and associations
+* Quest chains
+* Equipment sets
+* Crafting dependencies
+* Story relationships
+* Item collections
 
 ---
 
-## ⚙ Quality of Life Tools
+## 🎨 Multiple UI Themes
 
-Various workflow improvements designed to make inventory management faster and more intuitive.
+Customize the appearance of the application.
 
-* Faster item editing
-* Easier organization
-* Improved usability
-* Streamlined inventory workflows
+Included themes:
 
----
+* ⚔ War
+* 🌿 Druid
+* 🔮 Mage
+* 🛡 Paladin
 
-## 💾 Persistence & Storage
-
-* Automatic LocalStorage saving
-* Data remains after refresh or restart
-* No account required
-* No external database required
+Each theme features its own color palette and atmosphere.
 
 ---
 
-## 📦 Backup & Transfer
+## 💾 Save & Backup
 
-* Export inventories as JSON
-* Import existing inventories
-* Create backups
-* Share inventory setups between devices
+All data is stored locally in your browser.
 
----
+* Automatic saving
+* LocalStorage persistence
+* JSON export
+* JSON import
+* Inventory backups
+* Easy transfer between devices
 
-# 🚧 Planned Features
-
-## 👤 Character & Player Inventory System
-
-* Multiple player profiles
-* Separate inventories for each character
-* Currency management
-* Weight limits
-* Carry capacity tracking
-* Character wealth tracking
-* Equipment management
+No account required.
 
 ---
 
-## 🌍 Campaign & World Management
+# 🎯 Intended Use Cases
 
-Future updates may include:
+* Dungeons & Dragons Campaigns
+* TTRPG Inventory Tracking
+* Character Equipment Management
+* Fantasy Worldbuilding
+* Writing & Lore Projects
+* Loot Organization
+* Resource Tracking
+* Crafting Systems
+* Party Inventory Management
 
+---
+
+# 🚧 Future Desktop Version
+
+The current browser version serves as a public demo and testing ground for future development.
+
+Planned features for the standalone desktop edition may include:
+
+* Multi-user support
 * Shared inventories
-* Multiplayer support
-* Campaign organization tools
-* NPC inventory management
+* Campaign management tools
+* Advanced character sheets
+* Expanded crafting systems
+* World management features
+* NPC inventory tracking
 * Merchant systems
-* Party inventory tracking
+* Improved performance for large inventories
+* Cloud synchronization
+
+Features and priorities may change during development.
 
 ---
 
@@ -157,22 +213,20 @@ Future updates may include:
 * LocalStorage API
 * FileReader API
 
+No frameworks. No backend. No databases.
+
 ---
 
-# 🎯 Use Cases
+# 📜 Project Status
 
-* D&D Campaign Management
-* RPG Character Inventories
-* Dungeon Master Tools
-* Fantasy Worldbuilding
-* Writing & Lore Projects
-* Loot Management
-* Merchant Inventories
-* Resource Tracking
-* Character Management
+🟢 Active Development
+
+The Adventurer's Satchel is currently being developed as an experimental inventory management platform for fantasy and tabletop roleplaying games.
+
+Feedback, suggestions, and bug reports are always welcome.
 
 ---
 
 Created by **Phaizona**
 
-⭐ If you enjoyed this project, consider starring the repository.
+⭐ If you enjoy the project, consider starring the repository.
