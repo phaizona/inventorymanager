@@ -19,6 +19,27 @@ const RARITIES = [
 ];
 function rarityColor(key) { return (RARITIES.find(r => r.key === key) || RARITIES[0]).color; }
 
+/* ── Item Tags ── */
+const ITEM_TAGS = [
+  { key: 'equipment',  label: 'Equipment',  color: '#e87830', icon: '⚔' },
+  { key: 'consumable', label: 'Consumable', color: '#44bb66', icon: '🧪' },
+  { key: 'materials',  label: 'Materials',  color: '#aa8844', icon: '🪨' },
+  { key: 'special',    label: 'Special',    color: '#cc44aa', icon: '✨' },
+  { key: 'valuable',   label: 'Valuable',   color: '#ddcc22', icon: '💎' },
+  { key: 'misc',       label: 'Misc',       color: '#778899', icon: '📦' },
+];
+function getTag(key) { return ITEM_TAGS.find(t => t.key === key) || ITEM_TAGS[ITEM_TAGS.length - 1]; }
+
+/* ── Folder Types ── */
+const FOLDER_TYPES = [
+  { key: 'default',  label: 'Folder',    emoji: '📁' },
+  { key: 'chest',    label: 'Chest',     emoji: '🪙' },
+  { key: 'backpack', label: 'Backpack',  emoji: '🎒' },
+  { key: 'crate',    label: 'Crate',     emoji: '📦' },
+  { key: 'bag',      label: 'Bag',       emoji: '👜' },
+];
+function getFolderType(key) { return FOLDER_TYPES.find(t => t.key === key) || FOLDER_TYPES[0]; }
+
 /* ================================================================
    STATE
 ================================================================ */
@@ -46,6 +67,7 @@ let lassoHasMoved = false;
 
 let sidebarQty    = 1;
 let sidebarRarity = 0;
+let sidebarTag    = 'misc';
 let pendingImg    = null;
 let selectedAvatar = '🧙';
 let editingPlayerId = null;
@@ -59,15 +81,19 @@ let pendingConfirmCb = null;
 
 let libEditEntryId = null;
 let libEditRarityIdx = 0;
+let libEditTag = 'misc';
 
 let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
 
 let pendingCraftHint = null;
 
+/* Library filter state */
+let libTagFilter = 'all'; // 'all' or tag key
+
 /* ── Smooth arrow-key pan ── */
 const arrowKeys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
 let arrowAnimId = null;
-const ARROW_PAN_SPEED = 8; // pixels per frame at scale 1
+const ARROW_PAN_SPEED = 8;
 
 /* ================================================================
    IMAGE COMPRESSION UTILITY
@@ -88,7 +114,7 @@ function compressImage(dataUrl, maxSize = 256, quality = 0.72) {
       ctx.drawImage(img, 0, 0, w, h);
       resolve(canvas.toDataURL('image/webp', quality));
     };
-    img.onerror = () => resolve(dataUrl); // fallback unchanged
+    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
@@ -232,8 +258,6 @@ function save() {
     const data = JSON.stringify({ library, inventory, folders, players, ropes, recipes, view });
     localStorage.setItem(STORAGE_KEY, data);
   } catch (e) {
-    // Storage full – silently ignore, don't spam toasts
-    // Only warn once per session
     if (!save._warned) {
       save._warned = true;
       toast('⚠ Storage nearly full — export to back up!', true);
@@ -259,11 +283,29 @@ function load() {
       library = data.library;
     } else {
       const seen = new Set();
-      inventory.forEach(it => { const k=it.name.trim().toLowerCase(); if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0});}});
+      inventory.forEach(it => { const k=it.name.trim().toLowerCase(); if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0,starred:false,tag:'misc'});}});
     }
-    library.forEach(l => { if(l.gold===undefined) l.gold=0; });
-    inventory.forEach(i => { if(i.gold===undefined) i.gold=0; if(i.playerId===undefined) i.playerId=null; });
-    players.forEach(p => { if(p.maxWeight===undefined) p.maxWeight=50; if(p.gold===undefined) p.gold=100; if(p.avatar===undefined) p.avatar='🧙'; if(p.w===undefined) p.w=300; if(p.h===undefined) p.h=220; });
+    /* Normalize missing fields */
+    library.forEach(l => {
+      if (l.gold === undefined) l.gold = 0;
+      if (l.starred === undefined) l.starred = false;
+      if (!l.tag) l.tag = 'misc';
+    });
+    inventory.forEach(i => {
+      if (i.gold === undefined) i.gold = 0;
+      if (i.playerId === undefined) i.playerId = null;
+      if (!i.tag) i.tag = 'misc';
+    });
+    players.forEach(p => {
+      if (p.maxWeight === undefined) p.maxWeight = 50;
+      if (p.gold === undefined) p.gold = 100;
+      if (p.avatar === undefined) p.avatar = '🧙';
+      if (p.w === undefined) p.w = 300;
+      if (p.h === undefined) p.h = 220;
+    });
+    folders.forEach(f => {
+      if (!f.type) f.type = 'default';
+    });
   } catch(_) { inventory=[]; folders=[]; players=[]; ropes=[]; library=[]; recipes=[]; }
 }
 
@@ -288,7 +330,7 @@ importInput.addEventListener('change', e => {
       if(Array.isArray(data)){
         inventory=data;folders=[];players=[];ropes=[];library=[];recipes=[];
         const seen=new Set();
-        inventory.forEach(it=>{const k=it.name.trim().toLowerCase();if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0});}});
+        inventory.forEach(it=>{const k=it.name.trim().toLowerCase();if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0,starred:false,tag:'misc'});}});
       } else if(data.inventory){
         inventory=data.inventory||[];
         folders=data.folders||[];
@@ -298,9 +340,10 @@ importInput.addEventListener('change', e => {
         recipes=data.recipes||[];
         if(data.view) view=data.view;
       } else throw new Error('Unknown format');
-      library.forEach(l=>{if(l.gold===undefined)l.gold=0;});
-      inventory.forEach(i=>{if(i.gold===undefined)i.gold=0;if(i.playerId===undefined)i.playerId=null;});
+      library.forEach(l=>{if(l.gold===undefined)l.gold=0;if(l.starred===undefined)l.starred=false;if(!l.tag)l.tag='misc';});
+      inventory.forEach(i=>{if(i.gold===undefined)i.gold=0;if(i.playerId===undefined)i.playerId=null;if(!i.tag)i.tag='misc';});
       players.forEach(p=>{if(p.maxWeight===undefined)p.maxWeight=50;if(p.gold===undefined)p.gold=100;if(p.avatar===undefined)p.avatar='🧙';if(p.w===undefined)p.w=300;if(p.h===undefined)p.h=220;});
+      folders.forEach(f=>{if(!f.type)f.type='default';});
       save._warned = false;
       save();renderAll();renderLibrary();renderPlayersSidebar();renderRecipes();applyView();toast('⬆ Inventory imported!');
     }catch(_){toast('✕ Invalid file.',true);}
@@ -591,6 +634,27 @@ document.getElementById('msDeleteBtn').addEventListener('click', () => {
 document.getElementById('msCancelBtn').addEventListener('click', () => clearMultiSelect());
 
 /* ================================================================
+   FORGE PANEL — TAG SELECTOR
+================================================================ */
+function buildForgeTagSelector() {
+  const container = document.getElementById('forgeTagSelector');
+  if (!container) return;
+  container.innerHTML = '';
+  ITEM_TAGS.forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'tag-pill' + (sidebarTag === tag.key ? ' active' : '');
+    btn.dataset.tagKey = tag.key;
+    btn.style.setProperty('--tag-color', tag.color);
+    btn.textContent = tag.icon + ' ' + tag.label;
+    btn.addEventListener('click', () => {
+      sidebarTag = tag.key;
+      container.querySelectorAll('.tag-pill').forEach(b => b.classList.toggle('active', b.dataset.tagKey === tag.key));
+    });
+    container.appendChild(btn);
+  });
+}
+
+/* ================================================================
    FORGE PANEL
 ================================================================ */
 uploadZone.addEventListener('click', ()=>fileInput.click());
@@ -627,13 +691,16 @@ addBtn.addEventListener('click', () => {
   if(!name||!pendingImg) return;
   if(libNameExists(name)){toast('⚠ Already in library!',true);return;}
   const rarity=RARITIES[sidebarRarity].key;
-  const libEntry={id:uid(),name,src:pendingImg,rarity,weight,gold};
+  const tag=sidebarTag||'misc';
+  const libEntry={id:uid(),name,src:pendingImg,rarity,weight,gold,starred:false,tag};
   library.push(libEntry);
   placeLibItemOnCanvas(libEntry,sidebarQty);
-  itemNameEl.value='';pendingImg=null;sidebarQty=1;sidebarRarity=0;
+  itemNameEl.value='';pendingImg=null;sidebarQty=1;sidebarRarity=0;sidebarTag='misc';
   qtyDisplay.textContent='1';weightInput.value='0.0';goldInput.value='0';
   previewImg.style.display='none';previewImg.src='';placeholder.style.display='flex';
-  updateRarityDisplay();checkReady();
+  updateRarityDisplay();
+  buildForgeTagSelector();
+  checkReady();
   toast(`✦ "${name}" forged & added to Library!`);
 });
 
@@ -641,7 +708,7 @@ function placeLibItemOnCanvas(libEntry, qty) {
   const vr=viewport.getBoundingClientRect();
   const cx=(vr.width/2-view.x)/view.scale;const cy=(vr.height/2-view.y)/view.scale;
   const scatter=130;
-  const item={id:uid(),name:libEntry.name,src:libEntry.src,qty,rarity:libEntry.rarity,weight:libEntry.weight||0,gold:libEntry.gold||0,wx:cx+(Math.random()-0.5)*scatter,wy:cy+(Math.random()-0.5)*scatter,folderId:null,playerId:null};
+  const item={id:uid(),name:libEntry.name,src:libEntry.src,qty,rarity:libEntry.rarity,weight:libEntry.weight||0,gold:libEntry.gold||0,tag:libEntry.tag||'misc',wx:cx+(Math.random()-0.5)*scatter,wy:cy+(Math.random()-0.5)*scatter,folderId:null,playerId:null};
   inventory.push(item);save();renderAll();return item;
 }
 
@@ -651,7 +718,7 @@ function placeLibItemOnCanvas(libEntry, qty) {
 function createFolder(name) {
   const vr=viewport.getBoundingClientRect();
   const cx=(vr.width/2-view.x)/view.scale;const cy=(vr.height/2-view.y)/view.scale;
-  const folder={id:uid(),name,wx:cx-120,wy:cy-90,w:260,h:200};
+  const folder={id:uid(),name,type:'default',wx:cx-120,wy:cy-90,w:260,h:200};
   folders.push(folder);save();renderAll();toast(`📁 Folder "${name}" created!`);return folder;
 }
 
@@ -711,7 +778,6 @@ function renderPlayersSidebar() {
   playerListEmpty.style.display='none';
   players.forEach(p=>{
     const tw=playerTotalWeight(p.id);const tg=playerTotalGoldFromItems(p.id);const netWorth=tg+(p.gold||0);
-    // FIX: count total qty, not just item types
     const totalQty = inventory.filter(i=>i.playerId===p.id).reduce((s,i)=>s+i.qty,0);
     const div=document.createElement('div');
     div.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(10,25,55,0.45);border:1px solid rgba(58,111,168,0.35);border-radius:5px;cursor:pointer;transition:background 0.14s;';
@@ -726,21 +792,100 @@ function renderPlayersSidebar() {
 /* ================================================================
    LIBRARY PANEL
 ================================================================ */
-function renderLibrary() {
-  const query=libSearch.value.trim().toLowerCase();
-  const filtered=query?library.filter(l=>l.name.toLowerCase().includes(query)):library;
-  libGrid.innerHTML='';
-  if(!library.length){libEmpty.style.display='flex';libGrid.style.display='none';}
-  else{libEmpty.style.display='none';libGrid.style.display='flex';filtered.forEach(entry=>libGrid.appendChild(buildLibCard(entry)));}
-  libFooter.textContent=library.length?`${library.length} item${library.length!==1?'s':''} in library`+( query?` (${filtered.length} shown)`:'' ):'Library is empty';
+function buildLibTagFilterBar() {
+  const bar = document.getElementById('libTagFilterBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  // All button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'lib-tag-filter-btn' + (libTagFilter === 'all' ? ' active' : '');
+  allBtn.dataset.filterKey = 'all';
+  allBtn.textContent = 'All';
+  allBtn.addEventListener('click', () => { libTagFilter = 'all'; buildLibTagFilterBar(); renderLibrary(); });
+  bar.appendChild(allBtn);
+
+  ITEM_TAGS.forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'lib-tag-filter-btn' + (libTagFilter === tag.key ? ' active' : '');
+    btn.dataset.filterKey = tag.key;
+    btn.style.setProperty('--tag-color', tag.color);
+    btn.textContent = tag.icon;
+    btn.title = tag.label;
+    btn.addEventListener('click', () => {
+      libTagFilter = libTagFilter === tag.key ? 'all' : tag.key;
+      buildLibTagFilterBar();
+      renderLibrary();
+    });
+    bar.appendChild(btn);
+  });
 }
+
+function renderLibrary() {
+  const query = libSearch.value.trim().toLowerCase();
+
+  // Sort: starred first, then alphabetical
+  let sorted = [...library].sort((a, b) => {
+    if (a.starred && !b.starred) return -1;
+    if (!a.starred && b.starred) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  // Filter by search
+  if (query) sorted = sorted.filter(l => l.name.toLowerCase().includes(query));
+
+  // Filter by tag
+  if (libTagFilter !== 'all') sorted = sorted.filter(l => l.tag === libTagFilter);
+
+  libGrid.innerHTML = '';
+  if (!library.length) {
+    libEmpty.style.display = 'flex';
+    libGrid.style.display = 'none';
+  } else {
+    libEmpty.style.display = 'none';
+    libGrid.style.display = 'flex';
+    sorted.forEach(entry => libGrid.appendChild(buildLibCard(entry)));
+  }
+  const total = library.length;
+  const shown = sorted.length;
+  libFooter.textContent = total
+    ? `${total} item${total !== 1 ? 's' : ''} in library` + (shown !== total ? ` (${shown} shown)` : '')
+    : 'Library is empty';
+}
+
 function buildLibCard(entry) {
   const card=document.createElement('div');card.className='lib-card';card.dataset.lid=entry.id;
-  card.title=`${entry.name}\nRarity: ${entry.rarity}\nWeight: ${entry.weight}kg · Gold: ${entry.gold}gp\n\nClick to place · Drag onto canvas`;
+  const tag = getTag(entry.tag || 'misc');
   const rc=rarityColor(entry.rarity);
+  card.title=`${entry.name}\nRarity: ${entry.rarity}\nTag: ${tag.label}\nWeight: ${entry.weight}kg · Gold: ${entry.gold}gp\n\nClick to place · Drag onto canvas`;
+
   const frame=document.createElement('div');frame.className='lib-card-frame';frame.style.borderColor=rc;frame.style.boxShadow=`0 0 5px ${rc}55`;
   const img=document.createElement('img');img.src=entry.src;img.alt=entry.name;img.draggable=false;frame.appendChild(img);
-  const dot=document.createElement('div');dot.className='lib-card-rarity';dot.style.color=rc;dot.style.background=rc;frame.appendChild(dot);
+
+  const rarityDot=document.createElement('div');rarityDot.className='lib-card-rarity';rarityDot.style.color=rc;rarityDot.style.background=rc;frame.appendChild(rarityDot);
+
+  /* ── Star button ── */
+  const starBtn=document.createElement('button');
+  starBtn.className='lib-card-star' + (entry.starred ? ' starred' : '');
+  starBtn.textContent = entry.starred ? '★' : '☆';
+  starBtn.title = entry.starred ? 'Unstar item' : 'Star item (pins to top)';
+  starBtn.addEventListener('pointerdown', e => e.stopPropagation());
+  starBtn.addEventListener('click', e => {
+    e.stopPropagation(); e.preventDefault();
+    entry.starred = !entry.starred;
+    save();
+    renderLibrary();
+  });
+  frame.appendChild(starBtn);
+
+  /* ── Tag badge ── */
+  const tagBadge=document.createElement('div');
+  tagBadge.className='lib-card-tag-badge';
+  tagBadge.style.setProperty('--tag-color', tag.color);
+  tagBadge.textContent = tag.icon;
+  tagBadge.title = tag.label;
+  frame.appendChild(tagBadge);
+
   const nameEl=document.createElement('div');nameEl.className='lib-card-name';nameEl.textContent=entry.name;
   const btns=document.createElement('div');btns.className='lib-card-btns';
   const editBtn=document.createElement('button');editBtn.className='lib-card-btn lib-card-edit';editBtn.textContent='✎';editBtn.title='Edit item';
@@ -753,7 +898,7 @@ function buildLibCard(entry) {
   card.appendChild(frame);card.appendChild(nameEl);card.appendChild(btns);
 
   let libDragging=false,libMoved=false,libMS={x:0,y:0};let ghostEl=null;
-  card.addEventListener('pointerdown',e=>{if(e.target===editBtn||e.target===removeBtn)return;e.stopPropagation();libDragging=true;libMoved=false;libMS={x:e.clientX,y:e.clientY};card.setPointerCapture(e.pointerId);});
+  card.addEventListener('pointerdown',e=>{if(e.target===editBtn||e.target===removeBtn||e.target===starBtn)return;e.stopPropagation();libDragging=true;libMoved=false;libMS={x:e.clientX,y:e.clientY};card.setPointerCapture(e.pointerId);});
   card.addEventListener('pointermove',e=>{
     if(!libDragging) return;
     const dx=e.clientX-libMS.x,dy=e.clientY-libMS.y;
@@ -768,7 +913,7 @@ function buildLibCard(entry) {
     const vr=viewport.getBoundingClientRect();const over=e.clientX>=vr.left&&e.clientX<=vr.right&&e.clientY>=vr.top&&e.clientY<=vr.bottom;
     if(!over){toast('Drop onto the canvas to place',true);return;}
     const wx=(e.clientX-vr.left-view.x)/view.scale-40;const wy=(e.clientY-vr.top-view.y)/view.scale-36;
-    const item={id:uid(),name:entry.name,src:entry.src,qty:1,rarity:entry.rarity,weight:entry.weight||0,gold:entry.gold||0,wx,wy,folderId:null,playerId:null};
+    const item={id:uid(),name:entry.name,src:entry.src,qty:1,rarity:entry.rarity,weight:entry.weight||0,gold:entry.gold||0,tag:entry.tag||'misc',wx,wy,folderId:null,playerId:null};
     inventory.push(item);save();renderAll();toast(`✦ "${entry.name}" placed!`);
   });
   return card;
@@ -779,12 +924,14 @@ function openLibEdit(libId) {
   const entry = library.find(l=>l.id===libId); if (!entry) return;
   libEditEntryId = libId;
   libEditRarityIdx = RARITIES.findIndex(r=>r.key===entry.rarity)||0;
+  libEditTag = entry.tag || 'misc';
   document.getElementById('libEditImg').src = entry.src;
   document.getElementById('libEditTitle').textContent = `Edit: ${entry.name}`;
   document.getElementById('libEditName').value = entry.name;
   document.getElementById('libEditWeight').value = entry.weight;
   document.getElementById('libEditGold').value = entry.gold;
   updateLibEditRarityDisplay();
+  buildLibEditTagSelector();
   document.getElementById('libEditPanel').classList.add('open');
 }
 function updateLibEditRarityDisplay() {
@@ -792,6 +939,24 @@ function updateLibEditRarityDisplay() {
   const d=document.getElementById('libEditRarityDisplay');
   d.textContent=r.label;d.className=`selector-display rarity-${r.key}`;
 }
+function buildLibEditTagSelector() {
+  const container = document.getElementById('libEditTagSelector');
+  if (!container) return;
+  container.innerHTML = '';
+  ITEM_TAGS.forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'tag-pill' + (libEditTag === tag.key ? ' active' : '');
+    btn.dataset.tagKey = tag.key;
+    btn.style.setProperty('--tag-color', tag.color);
+    btn.textContent = tag.icon + ' ' + tag.label;
+    btn.addEventListener('click', () => {
+      libEditTag = tag.key;
+      container.querySelectorAll('.tag-pill').forEach(b => b.classList.toggle('active', b.dataset.tagKey === tag.key));
+    });
+    container.appendChild(btn);
+  });
+}
+
 document.getElementById('libEditRarityPrev').addEventListener('click',()=>{libEditRarityIdx=(libEditRarityIdx-1+RARITIES.length)%RARITIES.length;updateLibEditRarityDisplay();});
 document.getElementById('libEditRarityNext').addEventListener('click',()=>{libEditRarityIdx=(libEditRarityIdx+1)%RARITIES.length;updateLibEditRarityDisplay();});
 document.getElementById('libEditClose').addEventListener('click',()=>document.getElementById('libEditPanel').classList.remove('open'));
@@ -805,7 +970,8 @@ document.getElementById('libEditSave').addEventListener('click',()=>{
   entry.rarity=RARITIES[libEditRarityIdx].key;
   entry.weight=parseFloat(document.getElementById('libEditWeight').value)||0;
   entry.gold=parseFloat(document.getElementById('libEditGold').value)||0;
-  inventory.forEach(i=>{if(i.name.trim().toLowerCase()===oldName.trim().toLowerCase()){i.name=entry.name;i.rarity=entry.rarity;i.weight=entry.weight;i.gold=entry.gold;}});
+  entry.tag=libEditTag||'misc';
+  inventory.forEach(i=>{if(i.name.trim().toLowerCase()===oldName.trim().toLowerCase()){i.name=entry.name;i.rarity=entry.rarity;i.weight=entry.weight;i.gold=entry.gold;i.tag=entry.tag;}});
   save();renderLibrary();renderAll();refreshAllPlayerStats();
   document.getElementById('libEditPanel').classList.remove('open');
   toast(`✎ "${entry.name}" updated!`);
@@ -908,14 +1074,11 @@ function executeCraft(aLibId, bLibId, resultLibId) {
   const ea = getLibEntry(aLibId), eb = getLibEntry(bLibId), er = getLibEntry(resultLibId);
   if(!ea||!eb||!er) { toast('⚠ Library entries missing',true); return; }
 
-  // Find ingredient items on canvas
   const sameIngredient = (aLibId === bLibId);
 
-  // Find all matching canvas items for ingredient A
   const aMatches = inventory.filter(i =>
     i.name.trim().toLowerCase() === ea.name.trim().toLowerCase() && i.qty >= 1
   );
-  // Find all matching canvas items for ingredient B
   const bMatches = inventory.filter(i =>
     i.name.trim().toLowerCase() === eb.name.trim().toLowerCase() && i.qty >= 1
   );
@@ -925,14 +1088,13 @@ function executeCraft(aLibId, bLibId, resultLibId) {
   let itemA, itemB;
 
   if (sameIngredient) {
-    // Need 2 of same item — either one stack with qty>=2 or two stacks
     const stackOf2 = aMatches.find(i => i.qty >= 2);
     if (stackOf2) {
       itemA = stackOf2;
-      itemB = stackOf2; // same stack
+      itemB = stackOf2;
     } else if (aMatches.length >= 2) {
       itemA = aMatches[0];
-      itemB = aMatches[1]; // two different stacks
+      itemB = aMatches[1];
     } else {
       toast(`⚠ Need at least 2 × "${ea.name}"`, true); return;
     }
@@ -942,25 +1104,20 @@ function executeCraft(aLibId, bLibId, resultLibId) {
     itemB = bMatches[0];
   }
 
-  // Save spawn position before modifying
   const spawnPos = containerRelToWorld(itemA);
 
-  // Consume ingredients
   if (itemA === itemB) {
-    // Same stack, remove 2
     itemA.qty -= 2;
   } else {
     itemA.qty -= 1;
     itemB.qty -= 1;
   }
 
-  // Remove depleted items
   const toRemove = [];
   if (itemA.qty <= 0) toRemove.push(itemA.id);
   if (itemB !== itemA && itemB.qty <= 0) toRemove.push(itemB.id);
   toRemove.forEach(id => { inventory = inventory.filter(i => i.id !== id); removeRopesForItem(id); });
 
-  // Place result item on canvas
   const resultItem = {
     id: uid(),
     name: er.name,
@@ -969,6 +1126,7 @@ function executeCraft(aLibId, bLibId, resultLibId) {
     rarity: er.rarity,
     weight: er.weight || 0,
     gold: er.gold || 0,
+    tag: er.tag || 'misc',
     wx: spawnPos.x + 110 + Math.random() * 40,
     wy: spawnPos.y + (Math.random() - 0.5) * 40,
     folderId: null,
@@ -1092,7 +1250,6 @@ function renderAll() {
     else world.appendChild(el);
   });
 
-  // FIX: Folder item count now sums qty, not just counts items
   folders.forEach(f=>{
     const items = inventory.filter(i=>i.folderId===f.id);
     const totalQty = items.reduce((s,i)=>s+i.qty,0);
@@ -1120,8 +1277,6 @@ function refreshPlayerStatsEl(playerId) {
   const weightEl=el.querySelector('.psc-weight');if(weightEl){weightEl.textContent=tw.toFixed(1)+' / '+p.maxWeight+' kg';weightEl.classList.toggle('over-limit',over);weightEl.classList.toggle('near-limit',near&&!over);}
   const goldEl=el.querySelector('.psc-gold');if(goldEl)goldEl.textContent=p.gold.toFixed(0)+' gp';
   const netEl=el.querySelector('.psc-networth');if(netEl)netEl.textContent=netWorth.toFixed(0)+' gp';
-
-  // FIX: Player item count now sums qty, not just counts item stacks
   const items = inventory.filter(i=>i.playerId===playerId);
   const totalQty = items.reduce((s,i)=>s+i.qty,0);
   const cntEl=el.querySelector('.player-item-count');
@@ -1133,13 +1288,59 @@ function refreshAllPlayerStats(){players.forEach(p=>refreshPlayerStatsEl(p.id));
    BUILD FOLDER ELEMENT
 ================================================================ */
 function buildFolderEl(folder) {
+  const ftype = getFolderType(folder.type || 'default');
   const el=document.createElement('div');el.className='inv-folder';el.dataset.fid=folder.id;
   el.style.cssText=`left:${folder.wx}px;top:${folder.wy}px;width:${folder.w}px;height:${folder.h}px;`;
-  el.innerHTML=`<div class="folder-header"><span class="folder-icon">📁</span><span class="folder-name-el">${folder.name}</span><div class="folder-actions"><button class="folder-action-btn" title="Rename" data-action="rename">✎</button><button class="folder-action-btn danger" title="Delete folder" data-action="delete">✕</button></div></div><div class="folder-body"></div><div class="folder-count"></div><div class="folder-resize"></div>`;
+
+  el.innerHTML=`<div class="folder-header">
+    <span class="folder-icon">${ftype.emoji}</span>
+    <span class="folder-name-el">${folder.name}</span>
+    <div class="folder-actions">
+      <button class="folder-action-btn" title="Change type" data-action="type">⊞</button>
+      <button class="folder-action-btn" title="Rename" data-action="rename">✎</button>
+      <button class="folder-action-btn danger" title="Delete folder" data-action="delete">✕</button>
+    </div>
+  </div>
+  <div class="folder-body"></div>
+  <div class="folder-count"></div>
+  <div class="folder-resize"></div>`;
+
+  /* ── Type selector ── */
+  el.querySelector('[data-action="type"]').addEventListener('click', e => {
+    e.stopPropagation();
+    // Build a mini type picker dropdown
+    const existingPicker = el.querySelector('.folder-type-picker');
+    if (existingPicker) { existingPicker.remove(); return; }
+    const picker = document.createElement('div');
+    picker.className = 'folder-type-picker';
+    FOLDER_TYPES.forEach(ft => {
+      const opt = document.createElement('button');
+      opt.className = 'folder-type-option' + (folder.type === ft.key ? ' active' : '');
+      opt.textContent = `${ft.emoji} ${ft.label}`;
+      opt.addEventListener('click', ev => {
+        ev.stopPropagation();
+        folder.type = ft.key;
+        const iconEl = el.querySelector('.folder-icon');
+        if (iconEl) iconEl.textContent = getFolderType(ft.key).emoji;
+        picker.remove();
+        save();
+        toast(`📁 Changed to ${ft.label}`);
+      });
+      picker.appendChild(opt);
+    });
+    el.querySelector('.folder-header').appendChild(picker);
+    // Close picker on outside click
+    setTimeout(() => {
+      const close = (ev) => { if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('pointerdown', close, true); } };
+      document.addEventListener('pointerdown', close, true);
+    }, 10);
+  });
+
   el.querySelector('[data-action="rename"]').addEventListener('click',e=>{e.stopPropagation();const nameSpan=el.querySelector('.folder-name-el');const input=document.createElement('input');input.className='folder-rename-input';input.value=folder.name;nameSpan.replaceWith(input);input.focus();input.select();function commit(){folder.name=input.value.trim()||folder.name;const s=document.createElement('span');s.className='folder-name-el';s.textContent=folder.name;input.replaceWith(s);save();}input.addEventListener('blur',commit,{once:true});input.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();input.blur();}if(ev.key==='Escape'){input.value=folder.name;input.blur();}});});
   el.querySelector('[data-action="delete"]').addEventListener('click',e=>{e.stopPropagation();const inside=inventory.filter(i=>i.folderId===folder.id).length;const vr=viewport.getBoundingClientRect();showCanvasConfirm(`Delete folder <em>${folder.name}</em>?${inside>0?`<br/><span style="font-size:10px;opacity:0.7">${inside} item(s) will be freed</span>`:''}`,vr.width/2-100,vr.height/2-50,()=>{inventory.forEach(i=>{if(i.folderId===folder.id){const w=containerRelToWorld(i);i.folderId=null;i.wx=w.x;i.wy=w.y;}});folders=folders.filter(f=>f.id!==folder.id);save();renderAll();toast(`📁 Folder "${folder.name}" deleted.`);});});
+
   const header=el.querySelector('.folder-header');let fDragging=false,fHasMoved=false,fMS={x:0,y:0},fFS={x:0,y:0};
-  header.addEventListener('pointerdown',e=>{if(e.target.closest('.folder-action-btn')) return;if(e.button!==0) return;e.stopPropagation();closeCtxMenu();deselectItem();clearMultiSelect();fDragging=true;fHasMoved=false;fMS={x:e.clientX,y:e.clientY};fFS={x:folder.wx,y:folder.wy};header.setPointerCapture(e.pointerId);});
+  header.addEventListener('pointerdown',e=>{if(e.target.closest('.folder-action-btn')||e.target.closest('.folder-type-picker')) return;if(e.button!==0) return;e.stopPropagation();closeCtxMenu();deselectItem();clearMultiSelect();fDragging=true;fHasMoved=false;fMS={x:e.clientX,y:e.clientY};fFS={x:folder.wx,y:folder.wy};header.setPointerCapture(e.pointerId);});
   header.addEventListener('pointermove',e=>{if(!fDragging) return;const dx=(e.clientX-fMS.x)/view.scale,dy=(e.clientY-fMS.y)/view.scale;if(!fHasMoved&&Math.hypot(dx,dy)<4) return;fHasMoved=true;el.classList.add('folder-dragging');folder.wx=fFS.x+dx;folder.wy=fFS.y+dy;el.style.left=folder.wx+'px';el.style.top=folder.wy+'px';updateAllRopePaths();});
   header.addEventListener('pointerup',()=>{if(!fDragging) return;fDragging=false;el.classList.remove('folder-dragging');if(fHasMoved)save();});
   const rh=el.querySelector('.folder-resize');let rDragging=false,rStart={x:0,y:0},rW=0,rH=0;
@@ -1295,8 +1496,8 @@ function openCtxMenu(id,screenX,screenY) {
 function closeCtxMenu(){ctxMenu.classList.remove('open');ctxTargetId=null;}
 viewport.addEventListener('pointerdown',e=>{if(!ctxMenu.contains(e.target)&&!canvasConfirm.contains(e.target))closeCtxMenu();},true);
 
-document.getElementById('ctxTakeOne').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item||item.qty<2) return;item.qty--;const offset=90+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);inventory.push({id:uid(),name:item.name,src:item.src,qty:1,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null});closeCtxMenu();save();renderAll();refreshAllPlayerStats();toast(`☝ Took 1 × ${item.name}`);});
-document.getElementById('ctxClone').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item) return;const offset=100+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);const clone={id:uid(),name:item.name,src:item.src,qty:item.qty,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null};inventory.push(clone);closeCtxMenu();save();renderAll();selectItem(clone.id);toast(`⎘ Cloned "${item.name}"`);});
+document.getElementById('ctxTakeOne').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item||item.qty<2) return;item.qty--;const offset=90+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);inventory.push({id:uid(),name:item.name,src:item.src,qty:1,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,tag:item.tag||'misc',wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null});closeCtxMenu();save();renderAll();refreshAllPlayerStats();toast(`☝ Took 1 × ${item.name}`);});
+document.getElementById('ctxClone').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item) return;const offset=100+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);const clone={id:uid(),name:item.name,src:item.src,qty:item.qty,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,tag:item.tag||'misc',wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null};inventory.push(clone);closeCtxMenu();save();renderAll();selectItem(clone.id);toast(`⎘ Cloned "${item.name}"`);});
 document.getElementById('ctxRename').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item) return;closeCtxMenu();const el=world.querySelector(`[data-id="${item.id}"]`);const nameDiv=el.querySelector('.item-name');const input=document.createElement('input');input.type='text';input.className='rename-input';input.value=item.name;input.maxLength=40;nameDiv.replaceWith(input);input.focus();input.select();function commitRename(){const newName=input.value.trim()||item.name;item.name=newName;save();renderAll();selectItem(item.id);toast(`✎ Renamed to "${item.name}"`);}input.addEventListener('blur',commitRename,{once:true});input.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();input.blur();}if(ev.key==='Escape'){input.value=item.name;input.blur();}});});
 document.getElementById('ctxConnect').addEventListener('click',()=>{const id=ctxTargetId;closeCtxMenu();startConnect(id);toast('🔗 Click another item to connect');});
 document.getElementById('ctxCraft').addEventListener('click',()=>{
@@ -1344,5 +1545,8 @@ requestAnimationFrame(()=>{
   applyView();
 });
 renderAll();
+renderLibrary();
 renderPlayersSidebar();
 renderRecipes();
+buildForgeTagSelector();
+buildLibTagFilterBar();

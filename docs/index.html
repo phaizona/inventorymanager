@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Uncial+Antiqua&family=Cinzel:wght@400;600&family=Philosopher:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
-  
 </head>
 <body>
 
@@ -67,6 +66,11 @@
             <button class="selector-btn" id="rarityNext">›</button>
           </div>
         </div>
+        <!-- TAG SELECTOR (new) -->
+        <div>
+          <p class="field-label">Tag</p>
+          <div class="tag-pill-grid" id="forgeTagSelector"></div>
+        </div>
         <div class="stat-row">
           <div>
             <p class="field-label">Weight <span style="opacity:.5;font-size:9px">(kg)</span></p>
@@ -107,6 +111,8 @@
           <input class="lib-search" type="text" id="libSearch" placeholder="Search library…" />
           <button class="lib-search-clear hidden" id="libSearchClear">✕</button>
         </div>
+        <!-- TAG FILTER BAR (new) -->
+        <div class="lib-tag-filter-bar" id="libTagFilterBar"></div>
         <div class="lib-grid" id="libGrid"></div>
         <div class="lib-empty" id="libEmpty" style="display:none">
           <span class="lib-empty-icon">📭</span>
@@ -133,6 +139,11 @@
               <div class="selector-display" id="libEditRarityDisplay">Common</div>
               <button class="selector-btn" id="libEditRarityNext">›</button>
             </div>
+          </div>
+          <!-- TAG SELECTOR in edit panel (new) -->
+          <div>
+            <p class="field-label">Tag</p>
+            <div class="tag-pill-grid" id="libEditTagSelector"></div>
           </div>
           <div class="stat-row">
             <div>
@@ -378,6 +389,6 @@
 <div class="toast-container" id="toastContainer"></div>
 <input type="file" id="importInput" accept=".json" style="display:none" />
 
-<script src="script.js" defer></script> 
+<script src="script.js" defer></script>
 </body>
 </html>
