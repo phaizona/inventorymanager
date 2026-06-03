@@ -19,7 +19,6 @@ const RARITIES = [
 ];
 function rarityColor(key) { return (RARITIES.find(r => r.key === key) || RARITIES[0]).color; }
 
-/* ── Item Tags ── */
 const ITEM_TAGS = [
   { key: 'equipment',  label: 'Equipment',  color: '#e87830', icon: '⚔' },
   { key: 'consumable', label: 'Consumable', color: '#44bb66', icon: '🧪' },
@@ -30,7 +29,6 @@ const ITEM_TAGS = [
 ];
 function getTag(key) { return ITEM_TAGS.find(t => t.key === key) || ITEM_TAGS[ITEM_TAGS.length - 1]; }
 
-/* ── Folder Types ── */
 const FOLDER_TYPES = [
   { key: 'default',  label: 'Folder',    emoji: '📁' },
   { key: 'chest',    label: 'Chest',     emoji: '🪙' },
@@ -87,16 +85,14 @@ let isPanning = false, panStart = { x: 0, y: 0 }, viewStart = { x: 0, y: 0 };
 
 let pendingCraftHint = null;
 
-/* Library filter state */
-let libTagFilter = 'all'; // 'all' or tag key
+let libTagFilter = 'all';
 
-/* ── Smooth arrow-key pan ── */
 const arrowKeys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false };
 let arrowAnimId = null;
 const ARROW_PAN_SPEED = 8;
 
 /* ================================================================
-   IMAGE COMPRESSION UTILITY
+   IMAGE COMPRESSION
 ================================================================ */
 function compressImage(dataUrl, maxSize = 256, quality = 0.72) {
   return new Promise((resolve) => {
@@ -136,6 +132,8 @@ const qtyDisplay    = document.getElementById('qtyDisplay');
 const rarityDisplay = document.getElementById('rarityDisplay');
 const weightInput   = document.getElementById('weightInput');
 const goldInput     = document.getElementById('goldInput');
+const descInput     = document.getElementById('descInput');        // NEW
+const descCharCount = document.getElementById('descCharCount');    // NEW
 const addBtn        = document.getElementById('addBtn');
 const itemCount     = document.getElementById('itemCount');
 const emptyMsg      = document.getElementById('emptyMsg');
@@ -147,6 +145,9 @@ const ctrlEject     = document.getElementById('ctrlEject');
 const ctrlEjectPlayer = document.getElementById('ctrlEjectPlayer');
 const ctrlWeight    = document.getElementById('ctrlWeight');
 const ctrlGold      = document.getElementById('ctrlGold');
+const ctrlDescPanel = document.getElementById('ctrlDescPanel');    // NEW
+const ctrlDescSep   = document.getElementById('ctrlDescSep');      // NEW
+const ctrlDescText  = document.getElementById('ctrlDescText');     // NEW
 const toastCont     = document.getElementById('toastContainer');
 const importInput   = document.getElementById('importInput');
 const ctxMenu       = document.getElementById('ctxMenu');
@@ -209,7 +210,6 @@ document.getElementById('ccYes').addEventListener('click', () => {
 });
 document.getElementById('ccNo').addEventListener('click', closeCanvasConfirm);
 
-/* Container helpers */
 function containerRelToWorld(item) {
   if (item.folderId) {
     const folder = folders.find(f => f.id === item.folderId);
@@ -283,18 +283,19 @@ function load() {
       library = data.library;
     } else {
       const seen = new Set();
-      inventory.forEach(it => { const k=it.name.trim().toLowerCase(); if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0,starred:false,tag:'misc'});}});
+      inventory.forEach(it => { const k=it.name.trim().toLowerCase(); if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0,starred:false,tag:'misc',description:''});}});
     }
-    /* Normalize missing fields */
     library.forEach(l => {
       if (l.gold === undefined) l.gold = 0;
       if (l.starred === undefined) l.starred = false;
       if (!l.tag) l.tag = 'misc';
+      if (l.description === undefined) l.description = '';   // NEW
     });
     inventory.forEach(i => {
       if (i.gold === undefined) i.gold = 0;
       if (i.playerId === undefined) i.playerId = null;
       if (!i.tag) i.tag = 'misc';
+      if (i.description === undefined) i.description = '';   // NEW
     });
     players.forEach(p => {
       if (p.maxWeight === undefined) p.maxWeight = 50;
@@ -330,7 +331,7 @@ importInput.addEventListener('change', e => {
       if(Array.isArray(data)){
         inventory=data;folders=[];players=[];ropes=[];library=[];recipes=[];
         const seen=new Set();
-        inventory.forEach(it=>{const k=it.name.trim().toLowerCase();if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0,starred:false,tag:'misc'});}});
+        inventory.forEach(it=>{const k=it.name.trim().toLowerCase();if(!seen.has(k)){seen.add(k);library.push({id:uid(),name:it.name,src:it.src,rarity:it.rarity||'common',weight:it.weight||0,gold:it.gold||0,starred:false,tag:'misc',description:''});}});
       } else if(data.inventory){
         inventory=data.inventory||[];
         folders=data.folders||[];
@@ -340,8 +341,8 @@ importInput.addEventListener('change', e => {
         recipes=data.recipes||[];
         if(data.view) view=data.view;
       } else throw new Error('Unknown format');
-      library.forEach(l=>{if(l.gold===undefined)l.gold=0;if(l.starred===undefined)l.starred=false;if(!l.tag)l.tag='misc';});
-      inventory.forEach(i=>{if(i.gold===undefined)i.gold=0;if(i.playerId===undefined)i.playerId=null;if(!i.tag)i.tag='misc';});
+      library.forEach(l=>{if(l.gold===undefined)l.gold=0;if(l.starred===undefined)l.starred=false;if(!l.tag)l.tag='misc';if(l.description===undefined)l.description='';});
+      inventory.forEach(i=>{if(i.gold===undefined)i.gold=0;if(i.playerId===undefined)i.playerId=null;if(!i.tag)i.tag='misc';if(i.description===undefined)i.description='';});
       players.forEach(p=>{if(p.maxWeight===undefined)p.maxWeight=50;if(p.gold===undefined)p.gold=100;if(p.avatar===undefined)p.avatar='🧙';if(p.w===undefined)p.w=300;if(p.h===undefined)p.h=220;});
       folders.forEach(f=>{if(!f.type)f.type='default';});
       save._warned = false;
@@ -437,7 +438,6 @@ document.getElementById('zoomReset').addEventListener('click', () => { const vr=
 document.getElementById('canvasFolderBtn').addEventListener('click', () => { openFolderCreateConfirm(); });
 document.getElementById('canvasPlayerBtn').addEventListener('click', () => quickCreatePlayer());
 
-/* ── Create folder via inline confirm ── */
 function openFolderCreateConfirm() {
   const vr = viewport.getBoundingClientRect();
   const x = vr.width/2 - 100, y = 60;
@@ -461,7 +461,6 @@ function openFolderCreateConfirm() {
   });
 }
 
-/* ── PAN: right click + middle click ── */
 viewport.addEventListener('contextmenu', e => { e.preventDefault(); });
 
 viewport.addEventListener('pointerdown', e => {
@@ -552,7 +551,6 @@ viewport.addEventListener('pointerup', e => {
   }
 });
 
-/* ── Arrow key smooth panning ── */
 function startArrowPan() {
   if (arrowAnimId) return;
   function tick() {
@@ -686,17 +684,24 @@ document.getElementById('rarityPrev').addEventListener('click', ()=>{sidebarRari
 document.getElementById('rarityNext').addEventListener('click', ()=>{sidebarRarity=(sidebarRarity+1)%RARITIES.length;updateRarityDisplay();});
 updateRarityDisplay();
 
+// Description char counter
+descInput.addEventListener('input', () => {
+  descCharCount.textContent = `${descInput.value.length} / 600`;
+});
+
 addBtn.addEventListener('click', () => {
   const name=itemNameEl.value.trim();const weight=parseFloat(weightInput.value)||0;const gold=parseFloat(goldInput.value)||0;
+  const description = descInput.value.trim();   // NEW
   if(!name||!pendingImg) return;
   if(libNameExists(name)){toast('⚠ Already in library!',true);return;}
   const rarity=RARITIES[sidebarRarity].key;
   const tag=sidebarTag||'misc';
-  const libEntry={id:uid(),name,src:pendingImg,rarity,weight,gold,starred:false,tag};
+  const libEntry={id:uid(),name,src:pendingImg,rarity,weight,gold,starred:false,tag,description};  // NEW
   library.push(libEntry);
   placeLibItemOnCanvas(libEntry,sidebarQty);
   itemNameEl.value='';pendingImg=null;sidebarQty=1;sidebarRarity=0;sidebarTag='misc';
   qtyDisplay.textContent='1';weightInput.value='0.0';goldInput.value='0';
+  descInput.value='';descCharCount.textContent='0 / 600';   // NEW
   previewImg.style.display='none';previewImg.src='';placeholder.style.display='flex';
   updateRarityDisplay();
   buildForgeTagSelector();
@@ -708,7 +713,7 @@ function placeLibItemOnCanvas(libEntry, qty) {
   const vr=viewport.getBoundingClientRect();
   const cx=(vr.width/2-view.x)/view.scale;const cy=(vr.height/2-view.y)/view.scale;
   const scatter=130;
-  const item={id:uid(),name:libEntry.name,src:libEntry.src,qty,rarity:libEntry.rarity,weight:libEntry.weight||0,gold:libEntry.gold||0,tag:libEntry.tag||'misc',wx:cx+(Math.random()-0.5)*scatter,wy:cy+(Math.random()-0.5)*scatter,folderId:null,playerId:null};
+  const item={id:uid(),name:libEntry.name,src:libEntry.src,qty,rarity:libEntry.rarity,weight:libEntry.weight||0,gold:libEntry.gold||0,tag:libEntry.tag||'misc',description:libEntry.description||'',wx:cx+(Math.random()-0.5)*scatter,wy:cy+(Math.random()-0.5)*scatter,folderId:null,playerId:null};  // NEW description
   inventory.push(item);save();renderAll();return item;
 }
 
@@ -778,7 +783,6 @@ function renderPlayersSidebar() {
   playerListEmpty.style.display='none';
   players.forEach(p=>{
     const tw=playerTotalWeight(p.id);const tg=playerTotalGoldFromItems(p.id);const netWorth=tg+(p.gold||0);
-    const totalQty = inventory.filter(i=>i.playerId===p.id).reduce((s,i)=>s+i.qty,0);
     const div=document.createElement('div');
     div.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(10,25,55,0.45);border:1px solid rgba(58,111,168,0.35);border-radius:5px;cursor:pointer;transition:background 0.14s;';
     div.innerHTML=`<span style="font-size:18px;flex-shrink:0;">${p.avatar}</span><div style="flex:1;min-width:0;"><div style="font-family:var(--font-heading);font-size:11px;color:var(--player-accent-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div><div style="font-family:var(--font-body);font-size:10px;color:var(--parchment-dark);font-style:italic;">⚖ ${tw.toFixed(1)}/${p.maxWeight}kg · 🪙 ${netWorth.toFixed(0)}gp</div></div>`;
@@ -796,15 +800,12 @@ function buildLibTagFilterBar() {
   const bar = document.getElementById('libTagFilterBar');
   if (!bar) return;
   bar.innerHTML = '';
-
-  // All button
   const allBtn = document.createElement('button');
   allBtn.className = 'lib-tag-filter-btn' + (libTagFilter === 'all' ? ' active' : '');
   allBtn.dataset.filterKey = 'all';
   allBtn.textContent = 'All';
   allBtn.addEventListener('click', () => { libTagFilter = 'all'; buildLibTagFilterBar(); renderLibrary(); });
   bar.appendChild(allBtn);
-
   ITEM_TAGS.forEach(tag => {
     const btn = document.createElement('button');
     btn.className = 'lib-tag-filter-btn' + (libTagFilter === tag.key ? ' active' : '');
@@ -823,20 +824,13 @@ function buildLibTagFilterBar() {
 
 function renderLibrary() {
   const query = libSearch.value.trim().toLowerCase();
-
-  // Sort: starred first, then alphabetical
   let sorted = [...library].sort((a, b) => {
     if (a.starred && !b.starred) return -1;
     if (!a.starred && b.starred) return 1;
     return a.name.localeCompare(b.name);
   });
-
-  // Filter by search
   if (query) sorted = sorted.filter(l => l.name.toLowerCase().includes(query));
-
-  // Filter by tag
   if (libTagFilter !== 'all') sorted = sorted.filter(l => l.tag === libTagFilter);
-
   libGrid.innerHTML = '';
   if (!library.length) {
     libEmpty.style.display = 'flex';
@@ -857,14 +851,13 @@ function buildLibCard(entry) {
   const card=document.createElement('div');card.className='lib-card';card.dataset.lid=entry.id;
   const tag = getTag(entry.tag || 'misc');
   const rc=rarityColor(entry.rarity);
-  card.title=`${entry.name}\nRarity: ${entry.rarity}\nTag: ${tag.label}\nWeight: ${entry.weight}kg · Gold: ${entry.gold}gp\n\nClick to place · Drag onto canvas`;
+  card.title=`${entry.name}\nRarity: ${entry.rarity}\nTag: ${tag.label}\nWeight: ${entry.weight}kg · Gold: ${entry.gold}gp${entry.description?'\n\n'+entry.description:''}\n\nClick to place · Drag onto canvas`;
 
   const frame=document.createElement('div');frame.className='lib-card-frame';frame.style.borderColor=rc;frame.style.boxShadow=`0 0 5px ${rc}55`;
   const img=document.createElement('img');img.src=entry.src;img.alt=entry.name;img.draggable=false;frame.appendChild(img);
 
   const rarityDot=document.createElement('div');rarityDot.className='lib-card-rarity';rarityDot.style.color=rc;rarityDot.style.background=rc;frame.appendChild(rarityDot);
 
-  /* ── Star button ── */
   const starBtn=document.createElement('button');
   starBtn.className='lib-card-star' + (entry.starred ? ' starred' : '');
   starBtn.textContent = entry.starred ? '★' : '☆';
@@ -878,7 +871,6 @@ function buildLibCard(entry) {
   });
   frame.appendChild(starBtn);
 
-  /* ── Tag badge ── */
   const tagBadge=document.createElement('div');
   tagBadge.className='lib-card-tag-badge';
   tagBadge.style.setProperty('--tag-color', tag.color);
@@ -913,7 +905,7 @@ function buildLibCard(entry) {
     const vr=viewport.getBoundingClientRect();const over=e.clientX>=vr.left&&e.clientX<=vr.right&&e.clientY>=vr.top&&e.clientY<=vr.bottom;
     if(!over){toast('Drop onto the canvas to place',true);return;}
     const wx=(e.clientX-vr.left-view.x)/view.scale-40;const wy=(e.clientY-vr.top-view.y)/view.scale-36;
-    const item={id:uid(),name:entry.name,src:entry.src,qty:1,rarity:entry.rarity,weight:entry.weight||0,gold:entry.gold||0,tag:entry.tag||'misc',wx,wy,folderId:null,playerId:null};
+    const item={id:uid(),name:entry.name,src:entry.src,qty:1,rarity:entry.rarity,weight:entry.weight||0,gold:entry.gold||0,tag:entry.tag||'misc',description:entry.description||'',wx,wy,folderId:null,playerId:null};
     inventory.push(item);save();renderAll();toast(`✦ "${entry.name}" placed!`);
   });
   return card;
@@ -930,6 +922,12 @@ function openLibEdit(libId) {
   document.getElementById('libEditName').value = entry.name;
   document.getElementById('libEditWeight').value = entry.weight;
   document.getElementById('libEditGold').value = entry.gold;
+  // Description NEW
+  const libEditDescEl = document.getElementById('libEditDesc');
+  const libEditDescCountEl = document.getElementById('libEditDescCount');
+  libEditDescEl.value = entry.description || '';
+  libEditDescCountEl.textContent = `${libEditDescEl.value.length} / 600`;
+  libEditDescEl.oninput = () => { libEditDescCountEl.textContent = `${libEditDescEl.value.length} / 600`; };
   updateLibEditRarityDisplay();
   buildLibEditTagSelector();
   document.getElementById('libEditPanel').classList.add('open');
@@ -971,7 +969,8 @@ document.getElementById('libEditSave').addEventListener('click',()=>{
   entry.weight=parseFloat(document.getElementById('libEditWeight').value)||0;
   entry.gold=parseFloat(document.getElementById('libEditGold').value)||0;
   entry.tag=libEditTag||'misc';
-  inventory.forEach(i=>{if(i.name.trim().toLowerCase()===oldName.trim().toLowerCase()){i.name=entry.name;i.rarity=entry.rarity;i.weight=entry.weight;i.gold=entry.gold;i.tag=entry.tag;}});
+  entry.description=document.getElementById('libEditDesc').value.trim();  // NEW
+  inventory.forEach(i=>{if(i.name.trim().toLowerCase()===oldName.trim().toLowerCase()){i.name=entry.name;i.rarity=entry.rarity;i.weight=entry.weight;i.gold=entry.gold;i.tag=entry.tag;i.description=entry.description;}});  // NEW sync
   save();renderLibrary();renderAll();refreshAllPlayerStats();
   document.getElementById('libEditPanel').classList.remove('open');
   toast(`✎ "${entry.name}" updated!`);
@@ -1073,68 +1072,37 @@ document.getElementById('craftBtn').addEventListener('click', ()=>{
 function executeCraft(aLibId, bLibId, resultLibId) {
   const ea = getLibEntry(aLibId), eb = getLibEntry(bLibId), er = getLibEntry(resultLibId);
   if(!ea||!eb||!er) { toast('⚠ Library entries missing',true); return; }
-
   const sameIngredient = (aLibId === bLibId);
-
-  const aMatches = inventory.filter(i =>
-    i.name.trim().toLowerCase() === ea.name.trim().toLowerCase() && i.qty >= 1
-  );
-  const bMatches = inventory.filter(i =>
-    i.name.trim().toLowerCase() === eb.name.trim().toLowerCase() && i.qty >= 1
-  );
-
+  const aMatches = inventory.filter(i => i.name.trim().toLowerCase() === ea.name.trim().toLowerCase() && i.qty >= 1);
+  const bMatches = inventory.filter(i => i.name.trim().toLowerCase() === eb.name.trim().toLowerCase() && i.qty >= 1);
   if (!aMatches.length) { toast(`⚠ Need "${ea.name}" on canvas`, true); return; }
-
   let itemA, itemB;
-
   if (sameIngredient) {
     const stackOf2 = aMatches.find(i => i.qty >= 2);
-    if (stackOf2) {
-      itemA = stackOf2;
-      itemB = stackOf2;
-    } else if (aMatches.length >= 2) {
-      itemA = aMatches[0];
-      itemB = aMatches[1];
-    } else {
-      toast(`⚠ Need at least 2 × "${ea.name}"`, true); return;
-    }
+    if (stackOf2) { itemA = stackOf2; itemB = stackOf2; }
+    else if (aMatches.length >= 2) { itemA = aMatches[0]; itemB = aMatches[1]; }
+    else { toast(`⚠ Need at least 2 × "${ea.name}"`, true); return; }
   } else {
     itemA = aMatches[0];
     if (!bMatches.length) { toast(`⚠ Need "${eb.name}" on canvas`, true); return; }
     itemB = bMatches[0];
   }
-
   const spawnPos = containerRelToWorld(itemA);
-
-  if (itemA === itemB) {
-    itemA.qty -= 2;
-  } else {
-    itemA.qty -= 1;
-    itemB.qty -= 1;
-  }
-
+  if (itemA === itemB) { itemA.qty -= 2; } else { itemA.qty -= 1; itemB.qty -= 1; }
   const toRemove = [];
   if (itemA.qty <= 0) toRemove.push(itemA.id);
   if (itemB !== itemA && itemB.qty <= 0) toRemove.push(itemB.id);
   toRemove.forEach(id => { inventory = inventory.filter(i => i.id !== id); removeRopesForItem(id); });
-
   const resultItem = {
-    id: uid(),
-    name: er.name,
-    src: er.src,
-    qty: 1,
-    rarity: er.rarity,
-    weight: er.weight || 0,
-    gold: er.gold || 0,
-    tag: er.tag || 'misc',
+    id: uid(), name: er.name, src: er.src, qty: 1, rarity: er.rarity,
+    weight: er.weight || 0, gold: er.gold || 0, tag: er.tag || 'misc',
+    description: er.description || '',   // NEW
     wx: spawnPos.x + 110 + Math.random() * 40,
     wy: spawnPos.y + (Math.random() - 0.5) * 40,
-    folderId: null,
-    playerId: null
+    folderId: null, playerId: null
   };
   inventory.push(resultItem);
   save(); renderAll(); refreshAllPlayerStats();
-
   requestAnimationFrame(() => {
     const el = world.querySelector(`[data-id="${resultItem.id}"]`);
     if (el) { el.classList.add('craft-flash'); el.addEventListener('animationend', () => el.classList.remove('craft-flash'), { once: true }); }
@@ -1249,14 +1217,12 @@ function renderAll() {
     else if(item.playerId){const bodyEl=world.querySelector(`.inv-player[data-pid="${item.playerId}"] .player-body`);if(bodyEl)bodyEl.appendChild(el);else{item.playerId=null;world.appendChild(el);}}
     else world.appendChild(el);
   });
-
   folders.forEach(f=>{
     const items = inventory.filter(i=>i.folderId===f.id);
     const totalQty = items.reduce((s,i)=>s+i.qty,0);
     const label=world.querySelector(`.inv-folder[data-fid="${f.id}"] .folder-count`);
     if(label) label.textContent = totalQty ? `${totalQty} item${totalQty!==1?'s':''}` : '';
   });
-
   players.forEach(p=>refreshPlayerStatsEl(p.id));
   emptyMsg.style.display=(!inventory.length&&!folders.length&&!players.length)?'block':'none';
   updateCount();renderRopes();renderMultiSelectHighlights();
@@ -1291,7 +1257,6 @@ function buildFolderEl(folder) {
   const ftype = getFolderType(folder.type || 'default');
   const el=document.createElement('div');el.className='inv-folder';el.dataset.fid=folder.id;
   el.style.cssText=`left:${folder.wx}px;top:${folder.wy}px;width:${folder.w}px;height:${folder.h}px;`;
-
   el.innerHTML=`<div class="folder-header">
     <span class="folder-icon">${ftype.emoji}</span>
     <span class="folder-name-el">${folder.name}</span>
@@ -1305,10 +1270,8 @@ function buildFolderEl(folder) {
   <div class="folder-count"></div>
   <div class="folder-resize"></div>`;
 
-  /* ── Type selector ── */
   el.querySelector('[data-action="type"]').addEventListener('click', e => {
     e.stopPropagation();
-    // Build a mini type picker dropdown
     const existingPicker = el.querySelector('.folder-type-picker');
     if (existingPicker) { existingPicker.remove(); return; }
     const picker = document.createElement('div');
@@ -1329,7 +1292,6 @@ function buildFolderEl(folder) {
       picker.appendChild(opt);
     });
     el.querySelector('.folder-header').appendChild(picker);
-    // Close picker on outside click
     setTimeout(() => {
       const close = (ev) => { if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('pointerdown', close, true); } };
       document.addEventListener('pointerdown', close, true);
@@ -1496,8 +1458,8 @@ function openCtxMenu(id,screenX,screenY) {
 function closeCtxMenu(){ctxMenu.classList.remove('open');ctxTargetId=null;}
 viewport.addEventListener('pointerdown',e=>{if(!ctxMenu.contains(e.target)&&!canvasConfirm.contains(e.target))closeCtxMenu();},true);
 
-document.getElementById('ctxTakeOne').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item||item.qty<2) return;item.qty--;const offset=90+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);inventory.push({id:uid(),name:item.name,src:item.src,qty:1,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,tag:item.tag||'misc',wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null});closeCtxMenu();save();renderAll();refreshAllPlayerStats();toast(`☝ Took 1 × ${item.name}`);});
-document.getElementById('ctxClone').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item) return;const offset=100+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);const clone={id:uid(),name:item.name,src:item.src,qty:item.qty,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,tag:item.tag||'misc',wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null};inventory.push(clone);closeCtxMenu();save();renderAll();selectItem(clone.id);toast(`⎘ Cloned "${item.name}"`);});
+document.getElementById('ctxTakeOne').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item||item.qty<2) return;item.qty--;const offset=90+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);inventory.push({id:uid(),name:item.name,src:item.src,qty:1,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,tag:item.tag||'misc',description:item.description||'',wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null});closeCtxMenu();save();renderAll();refreshAllPlayerStats();toast(`☝ Took 1 × ${item.name}`);});
+document.getElementById('ctxClone').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item) return;const offset=100+Math.random()*40,angle=Math.random()*Math.PI*2,w=containerRelToWorld(item);const clone={id:uid(),name:item.name,src:item.src,qty:item.qty,rarity:item.rarity,weight:item.weight||0,gold:item.gold||0,tag:item.tag||'misc',description:item.description||'',wx:w.x+Math.cos(angle)*offset,wy:w.y+Math.sin(angle)*offset,folderId:null,playerId:null};inventory.push(clone);closeCtxMenu();save();renderAll();selectItem(clone.id);toast(`⎘ Cloned "${item.name}"`);});
 document.getElementById('ctxRename').addEventListener('click',()=>{const item=inventory.find(i=>i.id===ctxTargetId);if(!item) return;closeCtxMenu();const el=world.querySelector(`[data-id="${item.id}"]`);const nameDiv=el.querySelector('.item-name');const input=document.createElement('input');input.type='text';input.className='rename-input';input.value=item.name;input.maxLength=40;nameDiv.replaceWith(input);input.focus();input.select();function commitRename(){const newName=input.value.trim()||item.name;item.name=newName;save();renderAll();selectItem(item.id);toast(`✎ Renamed to "${item.name}"`);}input.addEventListener('blur',commitRename,{once:true});input.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();input.blur();}if(ev.key==='Escape'){input.value=item.name;input.blur();}});});
 document.getElementById('ctxConnect').addEventListener('click',()=>{const id=ctxTargetId;closeCtxMenu();startConnect(id);toast('🔗 Click another item to connect');});
 document.getElementById('ctxCraft').addEventListener('click',()=>{
@@ -1521,7 +1483,34 @@ document.getElementById('ctxRemove').addEventListener('click',()=>{
 /* ================================================================
    SELECTION & BOTTOM PANEL
 ================================================================ */
-function selectItem(id){if(selectedId){const prev=world.querySelector(`[data-id="${selectedId}"]`);if(prev)prev.classList.remove('selected');}selectedId=id;const item=inventory.find(i=>i.id===id);if(!item) return;const el=world.querySelector(`[data-id="${id}"]`);if(el)el.classList.add('selected');ctrlName.childNodes[0].textContent=item.name;ctrlSub.textContent='selected';ctrlQty.textContent=item.qty;ctrlEject.style.display=item.folderId?'flex':'none';ctrlEjectPlayer.style.display=item.playerId?'flex':'none';const totalW=((item.weight||0)*item.qty).toFixed(1);const totalG=((item.gold||0)*item.qty).toFixed(0);ctrlWeight.textContent=`${totalW} kg${item.qty>1?' ('+item.weight+'×'+item.qty+')':''}`;ctrlGold.textContent=`${totalG} gp${item.qty>1?' ('+item.gold+'×'+item.qty+')':''}`;itemControls.classList.add('visible');}
+function selectItem(id){
+  if(selectedId){const prev=world.querySelector(`[data-id="${selectedId}"]`);if(prev)prev.classList.remove('selected');}
+  selectedId=id;
+  const item=inventory.find(i=>i.id===id);if(!item) return;
+  const el=world.querySelector(`[data-id="${id}"]`);if(el)el.classList.add('selected');
+  ctrlName.childNodes[0].textContent=item.name;
+  ctrlSub.textContent='selected';
+  ctrlQty.textContent=item.qty;
+  ctrlEject.style.display=item.folderId?'flex':'none';
+  ctrlEjectPlayer.style.display=item.playerId?'flex':'none';
+  const totalW=((item.weight||0)*item.qty).toFixed(1);
+  const totalG=((item.gold||0)*item.qty).toFixed(0);
+  ctrlWeight.textContent=`${totalW} kg${item.qty>1?' ('+item.weight+'×'+item.qty+')':''}`;
+  ctrlGold.textContent=`${totalG} gp${item.qty>1?' ('+item.gold+'×'+item.qty+')':''}`;
+
+  // Description panel NEW
+  const desc = item.description || '';
+  if (desc) {
+    ctrlDescText.textContent = desc;
+    ctrlDescPanel.style.display = 'flex';
+    ctrlDescSep.style.display = 'block';
+  } else {
+    ctrlDescPanel.style.display = 'none';
+    ctrlDescSep.style.display = 'none';
+  }
+
+  itemControls.classList.add('visible');
+}
 function deselectItem(){if(selectedId){const el=world.querySelector(`[data-id="${selectedId}"]`);if(el)el.classList.remove('selected');}selectedId=null;hideControls();}
 function hideControls(){itemControls.classList.remove('visible');}
 

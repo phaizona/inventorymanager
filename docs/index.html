@@ -66,7 +66,7 @@
             <button class="selector-btn" id="rarityNext">›</button>
           </div>
         </div>
-        <!-- TAG SELECTOR (new) -->
+        <!-- TAG SELECTOR -->
         <div>
           <p class="field-label">Tag</p>
           <div class="tag-pill-grid" id="forgeTagSelector"></div>
@@ -80,6 +80,12 @@
             <p class="field-label">Gold <span style="opacity:.5;font-size:9px">(gp)</span></p>
             <input class="gold-input" type="number" id="goldInput" value="0" min="0" step="1" placeholder="0" />
           </div>
+        </div>
+        <!-- DESCRIPTION FIELD (new) -->
+        <div>
+          <p class="field-label">Description <span style="opacity:.5;font-size:9px">(optional)</span></p>
+          <textarea class="desc-input" id="descInput" placeholder="A mysterious relic from a forgotten age…" maxlength="600" rows="3"></textarea>
+          <div class="desc-char-count" id="descCharCount">0 / 600</div>
         </div>
         <button class="btn-add" id="addBtn" disabled>Add to Inventory</button>
         <p class="upload-hint-sm" style="text-align:center;opacity:.55">Items saved to Library.<br/>Drag cards onto canvas.</p>
@@ -111,7 +117,6 @@
           <input class="lib-search" type="text" id="libSearch" placeholder="Search library…" />
           <button class="lib-search-clear hidden" id="libSearchClear">✕</button>
         </div>
-        <!-- TAG FILTER BAR (new) -->
         <div class="lib-tag-filter-bar" id="libTagFilterBar"></div>
         <div class="lib-grid" id="libGrid"></div>
         <div class="lib-empty" id="libEmpty" style="display:none">
@@ -120,7 +125,7 @@
         </div>
         <div class="lib-footer" id="libFooter">Library is empty</div>
       </div>
-      <!-- Inline library edit panel (slides over) -->
+      <!-- Inline library edit panel -->
       <div class="lib-edit-panel" id="libEditPanel">
         <div class="lib-edit-header">
           <div class="lib-edit-preview"><img id="libEditImg" src="" alt="" /></div>
@@ -140,7 +145,6 @@
               <button class="selector-btn" id="libEditRarityNext">›</button>
             </div>
           </div>
-          <!-- TAG SELECTOR in edit panel (new) -->
           <div>
             <p class="field-label">Tag</p>
             <div class="tag-pill-grid" id="libEditTagSelector"></div>
@@ -155,6 +159,12 @@
               <input class="gold-input" type="number" id="libEditGold" min="0" step="1" />
             </div>
           </div>
+          <!-- DESCRIPTION in edit panel (new) -->
+          <div>
+            <p class="field-label">Description <span style="opacity:.5;font-size:9px">(optional)</span></p>
+            <textarea class="desc-input" id="libEditDesc" maxlength="600" rows="4" placeholder="A mysterious relic from a forgotten age…"></textarea>
+            <div class="desc-char-count" id="libEditDescCount">0 / 600</div>
+          </div>
         </div>
         <div class="lib-edit-footer">
           <button class="lib-edit-cancel" id="libEditCancel">Cancel</button>
@@ -168,12 +178,9 @@
       <div class="crafting-panel">
         <div class="crafting-scroll">
           <div class="sidebar-title" style="color:#80cc40;">⚗ Crafting Table</div>
-
           <div style="font-family:var(--font-body);font-style:italic;font-size:11px;color:var(--ink-faded);text-align:center;">
             Combine 2 library items → create 1 new item
           </div>
-
-          <!-- Ingredient 1 -->
           <div>
             <p class="field-label" style="color:#7abe40;">Ingredient A</p>
             <div class="craft-slot" id="craftSlotA">
@@ -181,10 +188,7 @@
               <span class="craft-slot-empty-text">Click to pick<br/>from library</span>
             </div>
           </div>
-
           <div class="craft-arrow">+</div>
-
-          <!-- Ingredient 2 -->
           <div>
             <p class="field-label" style="color:#7abe40;">Ingredient B</p>
             <div class="craft-slot" id="craftSlotB">
@@ -192,10 +196,7 @@
               <span class="craft-slot-empty-text">Click to pick<br/>from library</span>
             </div>
           </div>
-
           <div class="craft-arrow">↓</div>
-
-          <!-- Result -->
           <div>
             <p class="field-label" style="color:#e8c060;">Result Item</p>
             <div class="craft-result-slot unfilled" id="craftSlotResult">
@@ -203,11 +204,8 @@
               <span class="craft-slot-empty-text">Click to pick<br/>result item</span>
             </div>
           </div>
-
           <button class="btn-craft" id="craftBtn" disabled>Craft Item</button>
           <button class="btn-save-recipe" id="saveRecipeBtn" disabled>💾 Save as Recipe</button>
-
-          <!-- Saved Recipes -->
           <div id="recipeSection" style="display:none;">
             <hr class="craft-recipes-divider" />
             <p class="field-label" style="margin-bottom:6px;">Saved Recipes</p>
@@ -215,7 +213,6 @@
           </div>
         </div>
       </div>
-
       <!-- Item Picker Overlay -->
       <div class="item-picker-overlay" id="itemPickerOverlay">
         <div class="item-picker-header">
@@ -328,7 +325,17 @@
       <button class="ctx-btn ctx-btn-remove" id="ctxRemove"><span class="ctx-icon">🗑</span>Remove</button>
     </div>
 
+    <!-- ITEM CONTROLS BAR — description panel added on left -->
     <div class="item-controls" id="itemControls">
+      <!-- Description panel (new) -->
+      <div class="ctrl-desc-panel" id="ctrlDescPanel" style="display:none;">
+        <div class="ctrl-desc-label">📜 Lore</div>
+        <div class="ctrl-desc-scroll" id="ctrlDescScroll">
+          <div class="ctrl-desc-text" id="ctrlDescText"></div>
+        </div>
+      </div>
+      <div class="ctrl-sep" id="ctrlDescSep" style="display:none;"></div>
+
       <div class="ctrl-name" id="ctrlName">Item Name<span id="ctrlSub">selected</span></div>
       <div class="ctrl-sep"></div>
       <div class="ctrl-qty-group">

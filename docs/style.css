@@ -322,6 +322,85 @@ header {
   box-shadow: 0 0 5px rgba(200,50,30,0.3);
 }
 
+
+/* ══════════════════════════════════════════════
+   DESCRIPTION TEXTAREA (Forge & Edit panel)
+══════════════════════════════════════════════ */
+.desc-input {
+  width: 100%;
+  background: rgba(0,0,0,0.4);
+  border: 1.5px solid var(--leather);
+  border-radius: 4px;
+  color: var(--parchment);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 7px 9px;
+  outline: none;
+  resize: vertical;
+  min-height: 54px;
+  max-height: 140px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.desc-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(200,50,30,0.18);
+}
+.desc-input::placeholder {
+  color: var(--ink-faded);
+  font-style: italic;
+}
+.desc-char-count {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--ink-faded);
+  text-align: right;
+  margin-top: 2px;
+  opacity: 0.6;
+}
+
+/* ══════════════════════════════════════════════
+   ITEM CONTROLS BAR — description panel
+══════════════════════════════════════════════ */
+.ctrl-desc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 180px;
+  flex-shrink: 0;
+}
+.ctrl-desc-label {
+  font-family: var(--font-heading);
+  font-size: 9px;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.ctrl-desc-scroll {
+  height: 52px;
+  overflow-y: auto;
+  border: 1px solid var(--leather);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.35);
+  padding: 5px 8px;
+}
+.ctrl-desc-scroll::-webkit-scrollbar { width: 4px; }
+.ctrl-desc-scroll::-webkit-scrollbar-track { background: transparent; }
+.ctrl-desc-scroll::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 2px; }
+.ctrl-desc-text {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 11px;
+  color: var(--parchment-dark);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
+
 /* ══════════════════════════════════════════════
    LIBRARY CARD — STAR BUTTON & TAG BADGE
 ══════════════════════════════════════════════ */
@@ -722,3 +801,4 @@ header {
 ::-webkit-scrollbar-track { background: var(--deep-brown); }
 ::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--leather-light); }
+
