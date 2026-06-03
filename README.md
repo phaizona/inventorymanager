@@ -22,6 +22,22 @@ https://phaizona.github.io/theadventurerssatchel/
 
 ---
 
+# ✨ Current Demo Includes
+
+✓ Item Creation & Customization
+✓ Item Library & Favorites
+✓ Item Categories & Filtering
+✓ Crafting System
+✓ Character Management
+✓ Storage Containers
+✓ Infinite Inventory Canvas
+✓ Item Connections
+✓ Multiple UI Themes
+✓ Import / Export Support
+✓ Local Persistence
+
+---
+
 # ✨ Current Features
 
 ## 🎒 Item Forge
@@ -36,6 +52,16 @@ Create fully customizable inventory items.
 * Item renaming
 * Item deletion
 * Quick quantity controls
+* Item tags and categorization
+
+Available item categories:
+
+* Equipment
+* Consumables
+* Materials
+* Special
+* Valuable
+* Miscellaneous
 
 ---
 
@@ -65,8 +91,10 @@ Build your own reusable collection of items.
 
 * Save custom items permanently
 * Edit existing library entries
+* Favorite important items
+* Search by name
+* Filter by category tags
 * Reuse assets instantly
-* Search your library
 * Persistent local storage
 
 Perfect for recurring characters, campaigns, and worldbuilding projects.
@@ -103,6 +131,29 @@ Perfect for parties, adventuring groups, and tabletop campaigns.
 
 ---
 
+## 📦 Storage Containers
+
+Create organized storage spaces directly on the canvas.
+
+Available container types:
+
+* Backpack
+* Chest
+* Crate
+* Bag
+
+Features include:
+
+* Custom container naming
+* Visual inventory organization
+* Item storage and grouping
+* Container customization
+* Easy item management
+
+Perfect for creating realistic inventory layouts and storage systems.
+
+---
+
 ## 🗺 Infinite Inventory Canvas
 
 Organize inventories visually instead of using restrictive grids.
@@ -116,12 +167,11 @@ Organize inventories visually instead of using restrictive grids.
 
 Create:
 
-* Backpacks
 * Treasure hoards
 * Storage rooms
-* Chests
 * Equipment layouts
-* Merchant displays
+* Adventure packs
+* Loot collections
 * Worldbuilding references
 
 ---
@@ -174,7 +224,6 @@ No account required.
 
 * Dungeons & Dragons Campaigns
 * TTRPG Inventory Tracking
-* Character Equipment Management
 * Fantasy Worldbuilding
 * Writing & Lore Projects
 * Loot Organization
@@ -219,9 +268,11 @@ No frameworks. No backend. No databases.
 
 # 📜 Project Status
 
-🟢 Active Development
+🟢 Demo Complete
 
-The Adventurer's Satchel is currently being developed as an experimental inventory management platform for fantasy and tabletop roleplaying games.
+The browser demo has reached feature-complete status and serves as a proof of concept for the planned desktop version.
+
+Future updates will primarily focus on bug fixes, polish, and experimentation while development planning continues for the standalone application.
 
 Feedback, suggestions, and bug reports are always welcome.
 
