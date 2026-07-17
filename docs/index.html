@@ -25,9 +25,7 @@
 </header>
 
 <div class="main">
-  <aside class="sidebar" id="sidebar" style="position:relative;">
-    <div class="sidebar-resize-handle" id="sidebarResizeHandle"></div>
-
+  <aside class="sidebar" style="position:relative;">
     <div class="sidebar-tabs">
       <button class="sidebar-tab active" data-tab="forge">⚒ Forge</button>
       <button class="sidebar-tab"        data-tab="library">📚 Library</button>
@@ -83,7 +81,7 @@
             <input class="gold-input" type="number" id="goldInput" value="0" min="0" step="1" placeholder="0" />
           </div>
         </div>
-        <!-- DESCRIPTION FIELD -->
+        <!-- DESCRIPTION FIELD (new) -->
         <div>
           <p class="field-label">Description <span style="opacity:.5;font-size:9px">(optional)</span></p>
           <textarea class="desc-input" id="descInput" placeholder="A mysterious relic from a forgotten age…" maxlength="600" rows="3"></textarea>
@@ -93,7 +91,16 @@
         <p class="upload-hint-sm" style="text-align:center;opacity:.55">Items saved to Library.<br/>Drag cards onto canvas.</p>
       </div>
       <div class="sidebar-footer-text" id="itemCount">No items in inventory</div>
-
+      <!-- Theme Strip -->
+      <div class="theme-strip">
+        <div class="theme-strip-label">✦ Styles</div>
+        <div class="theme-btns">
+          <button class="theme-btn active" data-theme-id="default"><span>⚔</span>War</button>
+          <button class="theme-btn" data-theme-id="druid"><span>🌿</span>Druid</button>
+          <button class="theme-btn" data-theme-id="mage"><span>🔮</span>Mage</button>
+          <button class="theme-btn" data-theme-id="paladin"><span>🛡</span>Pala</button>
+        </div>
+      </div>
       <a class="phaizona-link" href="https://github.com/phaizona" target="_blank" rel="noopener noreferrer">
         <span class="phaizona-rune">ᚠ</span>
         <div class="phaizona-text">
@@ -152,7 +159,7 @@
               <input class="gold-input" type="number" id="libEditGold" min="0" step="1" />
             </div>
           </div>
-          <!-- DESCRIPTION in edit panel -->
+          <!-- DESCRIPTION in edit panel (new) -->
           <div>
             <p class="field-label">Description <span style="opacity:.5;font-size:9px">(optional)</span></p>
             <textarea class="desc-input" id="libEditDesc" maxlength="600" rows="4" placeholder="A mysterious relic from a forgotten age…"></textarea>
@@ -254,60 +261,6 @@
         </div>
       </div>
     </div>
-
-    <!-- SETTINGS (bottom, not a tab — replaces old theme-strip location) -->
-    <div class="settings-bottom-panel" id="settingsBottomPanel">
-      <button class="settings-toggle-header" id="settingsToggleHeader">
-        <span class="settings-toggle-icon">⚙</span>
-        <span class="settings-toggle-label">Ayarlar</span>
-        <span class="settings-toggle-caret" id="settingsCaret">▸</span>
-      </button>
-      <div class="settings-toggle-body" id="settingsToggleBody">
-        <div class="settings-section">
-          <div class="settings-section-title">Öğe Boyutu</div>
-          <div class="settings-row">
-            <span class="settings-label">Canvas öğe boyutu</span>
-            <span class="settings-value" id="itemSizeVal">68px</span>
-          </div>
-          <input type="range" class="settings-slider" id="itemSizeSlider" min="44" max="110" step="2" value="68" />
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Kütüphane Kart Boyutu</div>
-          <div class="settings-row">
-            <span class="settings-label">Library kart boyutu</span>
-            <span class="settings-value" id="libSizeVal">58px</span>
-          </div>
-          <input type="range" class="settings-slider" id="libSizeSlider" min="40" max="90" step="2" value="58" />
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Yazı Boyutu</div>
-          <div class="settings-row">
-            <span class="settings-label">Genel metin ölçeği</span>
-            <span class="settings-value" id="fontScaleVal">100%</span>
-          </div>
-          <input type="range" class="settings-slider" id="fontScaleSlider" min="80" max="130" step="5" value="100" />
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Efektler</div>
-          <label class="settings-toggle-row">
-            <input type="checkbox" id="glowToggle" />
-            <span class="settings-label">✨ Zengin parlama efektleri</span>
-          </label>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">✦ Tema</div>
-          <div class="style-grid" id="settingsThemeGrid"></div>
-        </div>
-
-        <div class="settings-section">
-          <button class="settings-reset-btn" id="settingsResetBtn">↺ Ayarları Sıfırla</button>
-        </div>
-      </div>
-    </div>
   </aside>
 
   <div class="canvas-viewport" id="canvasViewport">
@@ -374,7 +327,7 @@
 
     <!-- ITEM CONTROLS BAR — description panel added on left -->
     <div class="item-controls" id="itemControls">
-      <!-- Description panel -->
+      <!-- Description panel (new) -->
       <div class="ctrl-desc-panel" id="ctrlDescPanel" style="display:none;">
         <div class="ctrl-desc-label">📜 Lore</div>
         <div class="ctrl-desc-scroll" id="ctrlDescScroll">
@@ -404,7 +357,41 @@
   </div>
 </div>
 
-
+<!-- Player Settings Modal -->
+<div class="player-modal-overlay" id="playerModal">
+  <div class="player-modal">
+    <div class="player-modal-header">
+      <span style="font-size:20px" id="playerModalAvatar">🧙</span>
+      <div class="player-modal-title" id="playerModalTitle">Player Settings</div>
+      <button class="player-modal-close" id="playerModalClose">✕</button>
+    </div>
+    <div class="player-modal-body">
+      <div class="player-modal-field">
+        <label class="player-modal-label">Name</label>
+        <input class="player-modal-input" type="text" id="pmName" maxlength="30" />
+      </div>
+      <div class="player-modal-field">
+        <label class="player-modal-label">Avatar (emoji)</label>
+        <input class="player-modal-input" type="text" id="pmAvatar" maxlength="4" style="font-size:20px;text-align:center;" />
+      </div>
+      <div class="player-modal-divider"></div>
+      <div class="player-modal-field">
+        <label class="player-modal-label">Max Carry Weight (kg)</label>
+        <input class="player-modal-input" type="number" id="pmMaxWeight" min="0" step="1" />
+        <span class="player-modal-hint">Items exceeding this will show in red.</span>
+      </div>
+      <div class="player-modal-field">
+        <label class="player-modal-label">Purse / Gold on hand (gp)</label>
+        <input class="player-modal-input" type="number" id="pmGold" min="0" step="1" />
+        <span class="player-modal-hint">Total net worth = purse + item values.</span>
+      </div>
+    </div>
+    <div class="player-modal-footer">
+      <button class="player-modal-cancel" id="playerModalCancel">Cancel</button>
+      <button class="player-modal-save" id="playerModalSave">✔ Save Changes</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast-container" id="toastContainer"></div>
 <input type="file" id="importInput" accept=".json" style="display:none" />
