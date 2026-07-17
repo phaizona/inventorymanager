@@ -404,41 +404,7 @@
   </div>
 </div>
 
-<!-- Player Settings Modal -->
-<div class="player-modal-overlay" id="playerModal">
-  <div class="player-modal">
-    <div class="player-modal-header">
-      <span style="font-size:20px" id="playerModalAvatar">🧙</span>
-      <div class="player-modal-title" id="playerModalTitle">Player Settings</div>
-      <button class="player-modal-close" id="playerModalClose">✕</button>
-    </div>
-    <div class="player-modal-body">
-      <div class="player-modal-field">
-        <label class="player-modal-label">Name</label>
-        <input class="player-modal-input" type="text" id="pmName" maxlength="30" />
-      </div>
-      <div class="player-modal-field">
-        <label class="player-modal-label">Avatar (emoji)</label>
-        <input class="player-modal-input" type="text" id="pmAvatar" maxlength="4" style="font-size:20px;text-align:center;" />
-      </div>
-      <div class="player-modal-divider"></div>
-      <div class="player-modal-field">
-        <label class="player-modal-label">Max Carry Weight (kg)</label>
-        <input class="player-modal-input" type="number" id="pmMaxWeight" min="0" step="1" />
-        <span class="player-modal-hint">Items exceeding this will show in red.</span>
-      </div>
-      <div class="player-modal-field">
-        <label class="player-modal-label">Purse / Gold on hand (gp)</label>
-        <input class="player-modal-input" type="number" id="pmGold" min="0" step="1" />
-        <span class="player-modal-hint">Total net worth = purse + item values.</span>
-      </div>
-    </div>
-    <div class="player-modal-footer">
-      <button class="player-modal-cancel" id="playerModalCancel">Cancel</button>
-      <button class="player-modal-save" id="playerModalSave">✔ Save Changes</button>
-    </div>
-  </div>
-</div>
+
 
 <div class="toast-container" id="toastContainer"></div>
 <input type="file" id="importInput" accept=".json" style="display:none" />
